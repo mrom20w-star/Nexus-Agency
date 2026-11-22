@@ -177,7 +177,7 @@ export function ProfilePage({
     <div className="flex h-full min-h-0 flex-col bg-transparent">
       <div className="flex-1 overflow-y-auto scrollbar-dark">
         <div className="border-b border-[#c4454b]/20 px-4 lg:px-6 py-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#c4454b]/25 bg-gradient-to-l from-[#b83b44]/18 via-[#191113]/80 to-[#191113]/80 backdrop-blur-md px-4 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e05b64]/30 bg-gradient-to-l from-[#b83b44]/28 via-[#2c1016]/65 to-[#280e14]/60 backdrop-blur-xl px-4 py-3.5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-[16px] font-bold text-white">
@@ -228,19 +228,19 @@ export function ProfilePage({
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">{t(lang, 'balance')}</div>
               <div className="mt-1 font-mono-num text-[18px] font-bold text-[#00e344]">
                 {formatNumber(currentAccount.balanceUsdt)} {currLabel}
               </div>
             </div>
-            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">{t(lang, 'frozen')}</div>
               <div className="mt-1 font-mono-num text-[18px] font-bold text-[#f09599]">
                 {formatNumber(currentAccount.frozenUsdt)} {currLabel}
               </div>
             </div>
-            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">
                 {lang === 'ar' ? 'الإيداعات / بانتظار الإدارة' : 'Deposits / Pending'}
               </div>
@@ -251,7 +251,7 @@ export function ProfilePage({
                 </span>
               </div>
             </div>
-            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">
                 {lang === 'ar' ? 'طلبات السحب والوسيلة' : 'Withdrawals & Method'}
               </div>
@@ -271,7 +271,7 @@ export function ProfilePage({
                   key={item.route}
                   type="button"
                   onClick={() => onNavigate(item.route)}
-                  className="flex items-center justify-between gap-3 rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md hover:border-[#c4454b]/55 hover:bg-[#221619]/80 px-4 py-3 text-start transition-colors cursor-pointer"
+                  className="flex items-center justify-between gap-3 rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md hover:border-[#c4454b]/55 hover:bg-[#221619]/80 px-4 py-3 text-start transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -352,7 +352,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[295px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[295px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="flex items-center gap-2 text-[12px] text-[#a38f92]">
                     <span>{lang === 'ar' ? 'معرف الحساب' : 'account id'}</span>
                     <button
@@ -369,14 +369,14 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[165px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[165px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">{t(lang, 'balance')}</div>
                   <div className="mt-1.5 font-mono-num text-[14px] font-bold text-[#00e344]">
                     {formatNumber(currentAccount.balanceUsdt)} {currLabel}
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[210px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[210px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'البريد الإلكتروني' : 'email'}
                   </div>
@@ -385,7 +385,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[135px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[135px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'التأمين' : 'insurance'}
                   </div>
@@ -396,7 +396,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'عمولة الإيداع' : 'deposit fee'}
                   </div>
@@ -405,7 +405,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'عمولة السحب' : 'withdrawal fee'}
                   </div>
@@ -414,7 +414,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[175px] rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md px-4 py-3.5 flex items-center justify-between gap-4">
+                <div className="shrink-0 min-w-[175px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5 flex items-center justify-between gap-4">
                   <div>
                     <div className="text-[12px] text-[#a38f92]">2FA</div>
                     <div className="mt-1 text-[13px] font-semibold text-white">
@@ -475,7 +475,7 @@ export function ProfilePage({
                   <span>{lang === 'ar' ? 'طلب إيداع جديد' : 'Create new deposit'}</span>
                 </button>
 
-                <div className="inline-flex items-center rounded-[10px] border border-[#c4454b]/22 bg-[#191113]/75 p-1">
+                <div className="inline-flex items-center rounded-[10px] border border-[#e05b64]/28 bg-[#280e14]/56 p-1">
                   <button
                     type="button"
                     onClick={() => setHistoryTab('deposit')}
@@ -497,7 +497,7 @@ export function ProfilePage({
                 </div>
               </div>
 
-              <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md overflow-hidden">
+              <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md overflow-hidden">
                 {historyTab === 'deposit' ? (
                   deposits.length === 0 ? (
                     <div className="py-10 text-center text-[13.5px] text-[#a38f92]">
@@ -506,7 +506,7 @@ export function ProfilePage({
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse text-start text-[13px]">
-                        <thead className="bg-[#1c1315]/90 text-[12px] text-[#c7b3b6]">
+                        <thead className="bg-[#311118]/78 text-[12px] text-[#e2c7cb]">
                           <tr>
                             <th className="py-2.5 px-4 text-start">{t(lang, 'orderId')}</th>
                             <th className="py-2.5 px-4 text-start">{t(lang, 'bank')}</th>
@@ -544,7 +544,7 @@ export function ProfilePage({
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-start text-[13px]">
-                      <thead className="bg-[#1c1315]/90 text-[12px] text-[#c7b3b6]">
+                      <thead className="bg-[#311118]/78 text-[12px] text-[#e2c7cb]">
                         <tr>
                           <th className="py-2.5 px-4 text-start">{t(lang, 'orderId')}</th>
                           <th className="py-2.5 px-4 text-start">{t(lang, 'destinationMethod')}</th>

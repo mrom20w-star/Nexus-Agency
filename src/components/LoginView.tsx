@@ -39,8 +39,8 @@ export function LoginView({
         setError(
           res.error ||
             (lang === 'ar'
-              ? 'البريد الإلكتروني أو كلمة المرور مش صح، أو الحساب لسه متفعلش من الأدمن'
-              : 'Invalid credentials or account not activated by admin')
+              ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة، أو الحساب غير مفعّل'
+              : 'Invalid email or password, or account is not active')
         );
       }
     } finally {
@@ -51,9 +51,9 @@ export function LoginView({
   return (
     <div
       dir={lang === 'ar' ? 'rtl' : 'ltr'}
-      className="min-h-dvh w-full bg-[#0f0b0c] bg-[radial-gradient(ellipse_at_top,rgba(196,69,75,0.20),transparent_60%)] flex flex-col items-center justify-center p-4"
+      className="min-h-dvh w-full bg-[#16070a] bg-[radial-gradient(ellipse_at_top,rgba(205,58,68,0.34),transparent_60%),radial-gradient(ellipse_at_bottom_left,rgba(184,48,58,0.22),transparent_58%)] flex flex-col items-center justify-center p-4"
     >
-      <div className="w-full max-w-[430px] rounded-[20px] border border-[#c4454b]/25 bg-[#191113]/75 backdrop-blur-xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.6)] space-y-6">
+      <div className="w-full max-w-[430px] rounded-[20px] border border-[#e05b64]/30 bg-[#280e14]/58 backdrop-blur-xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.55)] space-y-6">
         <div className="flex items-center justify-between gap-3">
           <HostapayLogo platformName={platformName} countryCode={countryCode} />
           <div className="flex items-center gap-2 shrink-0">
@@ -71,10 +71,10 @@ export function LoginView({
           <h1 className="text-[20px] font-bold text-white">
             {lang === 'ar' ? 'تسجيل دخول الوكيل' : 'Agent Sign In'}
           </h1>
-          <p className="mt-1 text-[13px] text-[#baa6a9]">
+          <p className="mt-1 text-[13px] text-[#cbb3b7]">
             {lang === 'ar'
-              ? 'اكتب البريد الإلكتروني والباسورد اللي استلمتهم من الإدارة عشان تدخل حسابك على طول'
-              : 'Enter the email and password issued by the administrator to access your desk'}
+              ? 'أدخل البريد الإلكتروني وكلمة المرور للدخول إلى حسابك'
+              : 'Enter your email and password to sign in to your account'}
           </p>
         </div>
 
@@ -136,12 +136,6 @@ export function LoginView({
               : 'Sign In to Desk'}
           </button>
         </form>
-
-        <div className="rounded-[10px] border border-[#c4454b]/18 bg-[#120c0e]/65 px-3.5 py-2.5 text-center text-[12px] text-[#9e868a]">
-          {lang === 'ar'
-            ? 'إنشاء الحسابات مغلق — الدخول متاح فقط عبر الحسابات المفعّلة من الإدارة'
-            : 'Self-registration is disabled. Accounts are provisioned by Admin only.'}
-        </div>
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ export function StatisticsPage({
   return (
     <div className="h-full overflow-y-auto scrollbar-dark p-4 lg:p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-[10px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md p-1">
+        <div className="flex items-center gap-1 rounded-[10px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md p-1">
           {(
             [
               { id: 'today', label: t(lang, 'today') },
@@ -125,7 +125,7 @@ export function StatisticsPage({
         <KpiBox label={t(lang, 'avgConfirmTime')} value={lang === 'ar' ? '42 ثانية' : '42 sec'} accent="text-[#e87d82]" />
       </div>
 
-      <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md p-5">
+      <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
             <h2 className="text-[15px] font-semibold text-white">
@@ -181,13 +181,13 @@ export function StatisticsPage({
         </div>
       </div>
 
-      <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md overflow-hidden">
+      <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md overflow-hidden">
         <div className="border-b border-[#c4454b]/18 px-5 py-3.5 text-[14px] font-semibold text-white">
           {t(lang, 'volumeByMethod')}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-start text-[13px]">
-            <thead className="bg-[#1c1315]/90 text-[12px] text-[#c7b3b6]">
+            <thead className="bg-[#311118]/78 text-[12px] text-[#e2c7cb]">
               <tr>
                 <th className="py-2.5 px-4 text-start">{t(lang, 'bank')}</th>
                 <th className="py-3 px-4 text-start">{t(lang, 'accountNumber')}</th>
@@ -226,7 +226,7 @@ export function StatisticsPage({
 
 function KpiBox({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#191113]/75 backdrop-blur-md p-4">
+    <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md p-4">
       <div className="text-[12px] text-[#a38f92]">{label}</div>
       <div className={`mt-1.5 text-[20px] font-bold font-mono-num ${accent}`}>{value}</div>
     </div>

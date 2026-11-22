@@ -24,13 +24,13 @@ export function BottomBar({
   const safeTotal = Math.max(1, totalPages);
 
   return (
-    <div className="shrink-0 border-t border-[#c4454b]/20 bg-[#161012]/80 backdrop-blur-md px-4 lg:px-5 py-2.5 flex items-center justify-between gap-3">
+    <div className="shrink-0 border-t border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-xl px-4 lg:px-5 py-2.5 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onRefresh}
           aria-label={lang === 'ar' ? 'تحديث' : 'Refresh'}
-          className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#b83b44]/85 hover:bg-[#c94a53]/90 border border-[#f29b9f]/25 text-white transition-colors cursor-pointer"
+          className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#b83b44]/85 hover:bg-[#c94a53]/90 border border-[#f29b9f]/30 text-white transition-colors cursor-pointer"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </button>
@@ -40,7 +40,7 @@ export function BottomBar({
             type="button"
             onClick={onToggleExpand}
             aria-label={lang === 'ar' ? 'تبديل العرض' : 'Toggle density'}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#c4454b]/25 bg-[#221619]/75 text-[#c7b3b6] hover:text-white hover:bg-[#2c1c20] transition-colors cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#e05b64]/28 bg-[#36141c]/65 text-[#e2c7cb] hover:text-white hover:bg-[#441923]/75 transition-colors cursor-pointer"
           >
             {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>

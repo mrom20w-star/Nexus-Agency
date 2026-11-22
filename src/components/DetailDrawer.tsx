@@ -97,8 +97,8 @@ export function DetailDrawer({
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside className="fixed z-50 lg:z-35 top-0 lg:top-[3.75rem] end-0 w-full lg:w-[475px] h-full lg:h-[calc(100vh-3.75rem)] bg-[#171012]/90 backdrop-blur-xl border-s border-[#c4454b]/22 flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between gap-3 px-5 h-[3.75rem] border-b border-[#c4454b]/20 shrink-0">
+      <aside className="fixed z-50 lg:z-35 top-0 lg:top-[3.75rem] end-0 w-full lg:w-[475px] h-full lg:h-[calc(100vh-3.75rem)] bg-[#240c11]/75 backdrop-blur-2xl border-s border-[#e05b64]/28 flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between gap-3 px-5 h-[3.75rem] border-b border-[#e05b64]/24 shrink-0">
           <div className="flex min-w-0 items-center gap-2">
             {canBack && onBack && (
               <button
@@ -157,7 +157,7 @@ export function DetailDrawer({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 scrollbar-dark">{children}</div>
 
         {(inlineConfirm || actions.length > 0) && (
-          <div className="shrink-0 border-t border-[#c4454b]/20 bg-[#171012]/85 px-5 py-4 flex flex-col gap-2">
+          <div className="shrink-0 border-t border-[#e05b64]/24 bg-[#240c11]/70 px-5 py-4 flex flex-col gap-2">
             {inlineConfirm ? (
               <div
                 className={`flex flex-col gap-2.5 rounded-[10px] border p-3 ${

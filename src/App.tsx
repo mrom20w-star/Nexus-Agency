@@ -471,7 +471,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-dvh w-full bg-[#0f0b0c] bg-[radial-gradient(ellipse_at_top_right,rgba(196,69,75,0.12),transparent_55%)] text-white flex flex-col overflow-hidden">
+    <div className="h-dvh w-full bg-[#16070a] bg-[radial-gradient(ellipse_at_top,_rgba(205,58,68,0.32),transparent_60%),radial-gradient(ellipse_at_bottom_left,_rgba(184,48,58,0.22),transparent_58%)] text-white flex flex-col overflow-hidden">
       <TopHeader
         lang={activeSettings.lang}
         platformName={agentState.config.platformName}

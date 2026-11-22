@@ -188,9 +188,9 @@ export function CommandPalette({
         role="dialog"
         aria-label={t(lang, 'searchPages')}
         onKeyDown={handleKeyDown}
-        className="relative z-10 w-full max-w-[560px] overflow-hidden rounded-[14px] border border-[#c4454b]/30 bg-[#191113]/90 backdrop-blur-xl shadow-2xl"
+        className="relative z-10 w-full max-w-[560px] overflow-hidden rounded-[14px] border border-[#e05b64]/35 bg-[#260d13]/78 backdrop-blur-2xl shadow-2xl"
       >
-        <div className="flex items-center gap-2.5 border-b border-[#c4454b]/20 px-4 py-3">
+        <div className="flex items-center gap-2.5 border-b border-[#e05b64]/24 px-4 py-3">
           <Search className="h-4 w-4 text-[#737373] shrink-0" />
           <input
             ref={inputRef}
@@ -206,7 +206,7 @@ export function CommandPalette({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-[6px] border border-[#303030] px-1.5 py-0.5 text-[11px] font-medium text-[#737373] hover:text-white cursor-pointer"
+            className="shrink-0 rounded-[6px] border border-[#e05b64]/30 px-1.5 py-0.5 text-[11px] font-medium text-[#d4b6ba] hover:text-white cursor-pointer"
           >
             ESC
           </button>
@@ -229,14 +229,14 @@ export function CommandPalette({
                     onClose();
                   }}
                   className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-start transition-colors cursor-pointer ${
-                    selected ? 'bg-[#252525]' : 'bg-transparent'
+                    selected ? 'bg-[#b83b44]/28' : 'bg-transparent'
                   }`}
                 >
                   <span className="flex items-center gap-2.5 min-w-0">
                     <span className="shrink-0">{item.icon}</span>
                     <span className="text-[13.5px] font-medium text-white truncate">{item.title}</span>
                   </span>
-                  <span className="shrink-0 text-[11.5px] text-[#737373]">
+                  <span className="shrink-0 text-[11.5px] text-[#cfaeb3]">
                     {isCurrent ? t(lang, 'currentPage') : item.group}
                   </span>
                 </button>
@@ -245,7 +245,7 @@ export function CommandPalette({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-[#252525] px-4 py-2 text-[11.5px] text-[#737373]">
+        <div className="flex items-center justify-between border-t border-[#e05b64]/24 px-4 py-2 text-[11.5px] text-[#cfaeb3]">
           <span>↑↓ {t(lang, 'toNavigate')}</span>
           <span>↵ {t(lang, 'toOpen')}</span>
         </div>

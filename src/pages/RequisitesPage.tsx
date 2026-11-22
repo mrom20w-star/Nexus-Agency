@@ -210,7 +210,7 @@ export function RequisitesPage({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/20 bg-[#171012]/80 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
         <div className="relative flex-1 max-w-sm">
           <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
           <input
@@ -284,7 +284,7 @@ export function RequisitesPage({
                   } ${
                     req.id === selectedId
                       ? 'border-[#d15b62] bg-[#25171b]/85'
-                      : 'border-[#c4454b]/22 bg-[#191113]/75 hover:border-[#c4454b]/45 hover:bg-[#201518]/80'
+                      : 'border-[#e05b64]/26 bg-[#280e14]/56 hover:border-[#e05b64]/48 hover:bg-[#341219]/68'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">

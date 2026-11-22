@@ -75,10 +75,10 @@ export function SettingsDrawer({
           />
         </section>
 
-        <div className="h-px bg-[#202020]" />
+        <div className="h-px bg-[#e05b64]/22" />
 
         <section className="space-y-3">
-          <h3 className="text-[12.5px] font-semibold text-[#aaaaaa] uppercase tracking-wide">
+          <h3 className="text-[12.5px] font-semibold text-[#d4b6ba] uppercase tracking-wide">
             {t(lang, 'layoutSection')}
           </h3>
 
@@ -119,25 +119,25 @@ export function SettingsDrawer({
             onChange={(v) => onUpdate({ sidebarCollapsedDesktop: v })}
           />
 
-          <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#252525] bg-[#1b1b1b] px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#e05b64]/24 bg-[#2e1117]/60 px-3 py-2.5">
             <span className="text-[13.5px] font-medium text-white">{t(lang, 'tableScale')}</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 disabled={settings.tableZoom <= 80}
                 onClick={() => onUpdate({ tableZoom: Math.max(80, settings.tableZoom - 5) })}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#303030] bg-[#252525] text-white disabled:opacity-40 cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#e05b64]/28 bg-[#3a151e]/75 text-white disabled:opacity-40 cursor-pointer"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="w-12 text-center text-[13px] font-mono-num text-[#aaaaaa]">
+              <span className="w-12 text-center text-[13px] font-mono-num text-[#e6c9ce]">
                 {settings.tableZoom}%
               </span>
               <button
                 type="button"
                 disabled={settings.tableZoom >= 120}
                 onClick={() => onUpdate({ tableZoom: Math.min(120, settings.tableZoom + 5) })}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#303030] bg-[#252525] text-white disabled:opacity-40 cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#e05b64]/28 bg-[#3a151e]/75 text-white disabled:opacity-40 cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -145,10 +145,10 @@ export function SettingsDrawer({
           </div>
         </section>
 
-        <div className="h-px bg-[#202020]" />
+        <div className="h-px bg-[#e05b64]/22" />
 
         <section className="space-y-3">
-          <h3 className="text-[12.5px] font-semibold text-[#aaaaaa] uppercase tracking-wide">
+          <h3 className="text-[12.5px] font-semibold text-[#d4b6ba] uppercase tracking-wide">
             {t(lang, 'behaviourSection')}
           </h3>
 

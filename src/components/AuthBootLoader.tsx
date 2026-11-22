@@ -21,16 +21,16 @@ export function AuthBootLoader({
   return (
     <div
       dir={isAr ? 'rtl' : 'ltr'}
-      className="grid min-h-dvh w-full place-items-center bg-[#0f0b0c] bg-[radial-gradient(ellipse_at_top,rgba(196,69,75,0.18),transparent_60%)] px-6 text-white select-none"
+      className="grid min-h-dvh w-full place-items-center bg-[#16070a] bg-[radial-gradient(ellipse_at_top,rgba(205,58,68,0.34),transparent_60%),radial-gradient(ellipse_at_bottom_left,rgba(184,48,58,0.22),transparent_58%)] px-6 text-white select-none"
     >
-      <div className="w-full max-w-[420px] rounded-[24px] border border-[#c4454b]/25 bg-[#191113]/75 backdrop-blur-xl p-7 text-center shadow-[0_24px_60px_rgba(0,0,0,0.55)]">
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#c4454b]/25 bg-[#221619]/75 px-3 py-1 text-[12px] font-semibold text-[#f3d5d7]">
+      <div className="w-full max-w-[420px] rounded-[24px] border border-[#e05b64]/30 bg-[#280e14]/58 backdrop-blur-xl p-7 text-center shadow-[0_24px_60px_rgba(0,0,0,0.55)]">
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#e05b64]/28 bg-[#36141c]/65 px-3 py-1 text-[12px] font-semibold text-[#f3d5d7]">
           <CountryFlagBadge code={countryCode} />
           <span className="tracking-tight">{platformName}</span>
         </div>
 
         <div className="mx-auto mb-5 relative flex h-16 w-16 items-center justify-center">
-          <div className="absolute inset-0 rounded-2xl border border-[#c4454b]/25 bg-[#201417]/80" />
+          <div className="absolute inset-0 rounded-2xl border border-[#e05b64]/28 bg-[#321219]/70" />
           <div className="absolute -inset-1 rounded-[20px] border-2 border-transparent border-t-[#c4454b] border-r-[#e87d82]/45 animate-spin" />
           <HostapayMark className="relative z-10 h-7 w-7 text-white" />
         </div>

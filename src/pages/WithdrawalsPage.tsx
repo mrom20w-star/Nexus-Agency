@@ -234,7 +234,7 @@ export function WithdrawalsPage({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/20 bg-[#171012]/80 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
           <input
@@ -271,7 +271,7 @@ export function WithdrawalsPage({
           </div>
         ) : (
           <table className="hpay-table w-full border-collapse text-start">
-            <thead className="sticky top-0 z-10 bg-[#1c1315]/95 backdrop-blur-md border-b border-[#c4454b]/22">
+            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#e05b64]/26">
               <tr className="text-[12px] font-medium text-[#c7b3b6]">
                 {!settings.hideRowNumbers && <th className="py-3 px-4 text-start w-12">#</th>}
                 <th className="py-3 px-4 text-start">{t(lang, 'orderId')}</th>
@@ -617,7 +617,7 @@ export function WithdrawalsPage({
                     {selected.receiptFiles.map((f, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between rounded-lg border border-[#c4454b]/20 bg-[#191113]/85 px-3 py-2 text-[12.5px]"
+                        className="flex items-center justify-between rounded-lg border border-[#e05b64]/24 bg-[#280e14]/65 px-3 py-2 text-[12.5px]"
                       >
                         <span className="flex items-center gap-2 text-white truncate">
                           <FileText className="h-4 w-4 text-[#00e344] shrink-0" />

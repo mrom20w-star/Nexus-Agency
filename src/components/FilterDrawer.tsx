@@ -25,16 +25,16 @@ export function FilterDrawer({
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden" onClick={onClose} aria-hidden="true" />
-      <aside className="fixed z-50 lg:z-35 top-0 lg:top-[3.75rem] start-0 lg:start-[20rem] w-full lg:w-[336px] h-full lg:h-[calc(100vh-3.75rem)] bg-[#171012]/90 backdrop-blur-xl border-e border-[#c4454b]/22 flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between px-5 h-[3.75rem] border-b border-[#c4454b]/20 shrink-0">
+      <aside className="fixed z-50 lg:z-35 top-0 lg:top-[3.75rem] start-0 lg:start-[20rem] w-full lg:w-[336px] h-full lg:h-[calc(100vh-3.75rem)] bg-[#240c11]/75 backdrop-blur-2xl border-e border-[#e05b64]/28 flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between px-5 h-[3.75rem] border-b border-[#e05b64]/24 shrink-0">
           <div className="flex items-center gap-2 text-[14px] font-semibold text-white">
-            <SlidersHorizontal className="h-4 w-4 text-[#e87d82]" />
+            <SlidersHorizontal className="h-4 w-4 text-[#f09599]" />
             <span>{title || t(lang, 'filters')}</span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#24181b]/80 text-[#c7b3b6] hover:text-white cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e05b64]/28 bg-[#36141c]/65 text-[#e2c7cb] hover:text-white cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>

@@ -84,8 +84,8 @@ export function Sidebar({
   const isCollapsedDesktop = collapsed;
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-[#161012]/80 backdrop-blur-xl border-e border-[#c4454b]/22 select-none">
-      <div className="flex items-center justify-between px-4 h-[3.75rem] border-b border-[#c4454b]/20 lg:hidden shrink-0">
+    <div className="flex h-full flex-col bg-[#2a0f15]/58 backdrop-blur-xl border-e border-[#e05b64]/28 select-none">
+      <div className="flex items-center justify-between px-4 h-[3.75rem] border-b border-[#e05b64]/24 lg:hidden shrink-0">
         <HostapayLogo countryCode={currentAccount.countryCode} platformName={platformName} />
         <div className="flex items-center gap-2">
           <button
@@ -95,7 +95,7 @@ export function Sidebar({
               onOpenSettings();
             }}
             aria-label={t(lang, 'settingsTitle')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#201518]/75 text-[#c7b3b6] hover:text-white cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e05b64]/28 bg-[#38141c]/65 text-[#e6c9ce] hover:text-white cursor-pointer"
           >
             <Settings className="h-4 w-4" />
           </button>
@@ -103,17 +103,17 @@ export function Sidebar({
             type="button"
             onClick={onCloseMobile}
             aria-label={t(lang, 'close')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#201518]/75 text-[#c7b3b6] hover:text-white cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e05b64]/28 bg-[#38141c]/65 text-[#e6c9ce] hover:text-white cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className={`shrink-0 ${isCollapsedDesktop ? 'lg:px-2.5 px-4' : 'px-4'} py-3 space-y-2.5 border-b border-[#c4454b]/20`}>
+      <div className={`shrink-0 ${isCollapsedDesktop ? 'lg:px-2.5 px-4' : 'px-4'} py-3 space-y-2.5 border-b border-[#e05b64]/24`}>
         {!isCollapsedDesktop ? (
           <>
-            <div className="flex items-center justify-between rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 px-3.5 py-2.5">
+            <div className="flex items-center justify-between rounded-[12px] border border-[#e05b64]/26 bg-[#341219]/60 px-3.5 py-2.5">
               <div className="text-[13.5px] font-medium text-[#d6c5c7]">
                 {t(lang, 'tradeStatus')}:{' '}
                 <span className="text-[#f09599] font-semibold">
@@ -204,7 +204,7 @@ export function Sidebar({
                 <Search className="h-3.5 w-3.5 shrink-0 text-[#e87d82]" />
                 <span className="truncate">{t(lang, 'searchPages')}</span>
               </span>
-              <span className="shrink-0 rounded-[5px] border border-[#c4454b]/25 bg-[#191113]/90 px-1.5 py-0.5 text-[10.5px] font-mono-num text-[#c7b3b6]">
+              <span className="shrink-0 rounded-[5px] border border-[#e05b64]/28 bg-[#341219]/75 px-1.5 py-0.5 text-[10.5px] font-mono-num text-[#e2c7cb]">
                 Ctrl K
               </span>
             </button>
