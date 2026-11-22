@@ -1,0 +1,6 @@
+{
+  "name": "Nexus Agency — منصة الوكلاء والمدفوعات",
+  "description": "منصة مصرية متكاملة لإدارة وكلاء الدفع، الإيداعات، السحوبات بالجنيه المصري، وسائل الدفع، والرسايل.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

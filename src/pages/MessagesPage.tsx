@@ -1,0 +1,347 @@
+import React, { useMemo, useState } from 'react';
+import { CheckCircle2, MessageSquarePlus, Search, XCircle } from 'lucide-react';
+import { DetailDrawer, DrawerAction } from '../components/DetailDrawer';
+import { StatusBadge } from '../components/StatusBadge';
+import { t } from '../i18n';
+import { AppSettings, SmsMessage } from '../types';
+import { formatDateTime, formatMoney } from '../utils/format';
+
+export function MessagesPage({
+  messages,
+  settings,
+  onSimulateSms,
+  onRespondWithdrawal,
+  onNotify,
+}: {
+  messages: SmsMessage[];
+  settings: AppSettings;
+  onSimulateSms: () => Promise<void>;
+  onRespondWithdrawal: (messageId: string, action: 'confirm' | 'reject') => Promise<{ ok?: boolean; error?: string }>;
+  onNotify: (type: 'success' | 'error' | 'warning', title: string, message?: string) => void;
+}) {
+  const lang = settings.lang;
+  const currLabel = t(lang, 'currencyShort');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'pending_withdrawal' | 'matched' | 'unmatched'>('all');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return messages.filter((m) => {
+      if (filter === 'pending_withdrawal' && m.withdrawalActionStatus !== 'pending_confirmation') {
+        return false;
+      }
+      if ((filter === 'matched' || filter === 'unmatched') && m.status !== filter) return false;
+      if (q) {
+        return (
+          m.sender.toLowerCase().includes(q) ||
+          m.body.toLowerCase().includes(q) ||
+          (m.matchedOrderId?.toLowerCase().includes(q) ?? false)
+        );
+      }
+      return true;
+    });
+  }, [messages, filter, search]);
+
+  const selected = useMemo(
+    () => messages.find((m) => m.id === selectedId) ?? null,
+    [messages, selectedId]
+  );
+
+  const handleWithdrawalResponse = async (msg: SmsMessage, action: 'confirm' | 'reject') => {
+    setBusyId(msg.id);
+    try {
+      const res = await onRespondWithdrawal(msg.id, action);
+      if (res && res.ok === false) {
+        onNotify('error', res.error || (lang === 'ar' ? 'الرصيد مش كافي لإتمام السحب' : 'Insufficient balance'));
+        return;
+      }
+      if (action === 'confirm') {
+        onNotify(
+          'success',
+          lang === 'ar' ? 'تم تأكيد السحب وخصم المبلغ' : 'Withdrawal confirmed & deducted',
+          `${formatMoney(msg.withdrawalAmountEgp ?? msg.parsedAmount ?? 0)} ${currLabel}`
+        );
+      } else {
+        onNotify(
+          'warning',
+          lang === 'ar' ? 'تم رفض السحب ولم يتم خصم أي مبلغ' : 'Withdrawal rejected — balance untouched',
+          msg.matchedOrderId ?? ''
+        );
+      }
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const drawerActions: DrawerAction[] =
+    selected && selected.withdrawalActionStatus === 'pending_confirmation'
+      ? [
+          {
+            label: t(lang, 'confirmWithdrawalBtn'),
+            tone: 'primary',
+            onClick: async () => {
+              await handleWithdrawalResponse(selected, 'confirm');
+            },
+          },
+          {
+            label: t(lang, 'rejectWithdrawalBtn'),
+            tone: 'danger',
+            onClick: async () => {
+              await handleWithdrawalResponse(selected, 'reject');
+            },
+          },
+        ]
+      : [];
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/20 bg-[#171012]/80 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[240px]">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={
+                lang === 'ar' ? 'ابحث في نص الرسالة أو رقم الطلب...' : 'Search message or order ID...'
+              }
+              className="h-9 w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 ps-9 pe-3 text-[13px] text-white placeholder:text-[#a38f92] outline-none focus:border-[#d15b62]"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1 rounded-[10px] border border-[#c4454b]/22 bg-[#120c0e]/75 p-1">
+            {(
+              [
+                { id: 'all', label: t(lang, 'anyStatus') },
+                {
+                  id: 'pending_withdrawal',
+                  label: lang === 'ar' ? 'طلبات سحب للتأكيد' : 'Withdrawal Requests',
+                },
+                { id: 'matched', label: t(lang, 'status_matched') },
+                { id: 'unmatched', label: t(lang, 'status_unmatched') },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilter(tab.id)}
+                className={`rounded-[7px] px-2.5 py-1 text-[12px] font-medium transition-colors cursor-pointer ${
+                  filter === tab.id ? 'bg-[#b83b44]/85 text-white' : 'text-[#c7b3b6] hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSimulateSms}
+          className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[#f29b9f]/25 bg-[#b83b44]/85 px-3.5 text-[13px] font-semibold text-white hover:bg-[#c94a53]/90 backdrop-blur-md transition-colors cursor-pointer whitespace-nowrap"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+          <span>{t(lang, 'simulateSms')}</span>
+        </button>
+      </div>
+
+      <div className="hpay-table-wrap flex-1 min-h-0 overflow-auto scrollbar-dark">
+        {filtered.length === 0 ? (
+          <div className="flex h-64 items-center justify-center text-[13.5px] text-[#a38f92]">
+            {t(lang, 'nothingFound')}
+          </div>
+        ) : (
+          <table className="hpay-table w-full border-collapse text-start">
+            <thead className="sticky top-0 z-10 bg-[#1c1315]/95 backdrop-blur-md border-b border-[#c4454b]/22">
+              <tr className="text-[12px] font-medium text-[#c7b3b6]">
+                {!settings.hideRowNumbers && <th className="py-3 px-4 text-start w-12">#</th>}
+                <th className="py-3 px-4 text-start">{t(lang, 'smsSender')}</th>
+                <th className="py-3 px-4 text-start">{t(lang, 'smsBody')}</th>
+                <th className="py-3 px-4 text-start">{t(lang, 'amount')}</th>
+                <th className="py-3 px-4 text-start">{t(lang, 'matchedOrder')}</th>
+                <th className="py-3 px-4 text-start">{t(lang, 'status')}</th>
+                <th className="py-3 px-4 text-start">{lang === 'ar' ? 'إجراء' : 'Action'}</th>
+                <th className="py-3 px-4 text-start">{t(lang, 'date')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#c4454b]/15">
+              {filtered.map((msg, idx) => {
+                const isPendingWithdrawal = msg.withdrawalActionStatus === 'pending_confirmation';
+                const amountVal = msg.withdrawalAmountEgp ?? msg.parsedAmount;
+
+                return (
+                  <tr
+                    key={msg.id}
+                    onClick={() => setSelectedId(msg.id)}
+                    className={`cursor-pointer transition-colors ${
+                      selectedId === msg.id
+                        ? 'bg-[#c4454b]/15'
+                        : isPendingWithdrawal
+                        ? 'bg-[#c4454b]/[0.10] hover:bg-[#c4454b]/[0.18]'
+                        : 'hover:bg-[#1e1417]/75'
+                    }`}
+                  >
+                    {!settings.hideRowNumbers && (
+                      <td className="py-3 px-4 text-[#a38f92] font-mono-num">{idx + 1}</td>
+                    )}
+                    <td className="py-3 px-4 font-semibold text-white whitespace-nowrap">{msg.sender}</td>
+                    <td className="py-3 px-4 text-[#e2d4d6] max-w-md">
+                      <div className="truncate">{msg.body}</div>
+                      {msg.withdrawalDestination && (
+                        <div className="text-[11.5px] text-[#f09599] mt-0.5 truncate">
+                          {msg.withdrawalDestination}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 font-mono-num font-semibold text-[#00e344] whitespace-nowrap">
+                      {amountVal !== null && amountVal !== undefined
+                        ? `${formatMoney(amountVal)} ${currLabel}`
+                        : '—'}
+                    </td>
+                    <td className="py-3 px-4 font-mono-num text-[#f09599] whitespace-nowrap">
+                      {msg.matchedOrderId ?? '—'}
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {msg.withdrawalActionStatus === 'pending_confirmation' ? (
+                        <StatusBadge status="awaiting_confirmation" lang={lang} />
+                      ) : msg.withdrawalActionStatus === 'confirmed' ? (
+                        <StatusBadge status="completed" lang={lang} />
+                      ) : msg.withdrawalActionStatus === 'rejected' ? (
+                        <StatusBadge status="cancelled" lang={lang} />
+                      ) : (
+                        <StatusBadge status={msg.status} lang={lang} />
+                      )}
+                    </td>
+                    <td
+                      className="py-3 px-4 whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isPendingWithdrawal ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={busyId === msg.id}
+                            onClick={() => handleWithdrawalResponse(msg, 'confirm')}
+                            className="inline-flex items-center gap-1 rounded-[8px] bg-[#00e344] px-2.5 py-1 text-[11.5px] font-bold text-black hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>{lang === 'ar' ? 'تأكيد وخصم' : 'Confirm'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === msg.id}
+                            onClick={() => handleWithdrawalResponse(msg, 'reject')}
+                            className="inline-flex items-center gap-1 rounded-[8px] border border-[#e35d6a]/45 bg-[#e35d6a]/15 px-2.5 py-1 text-[11.5px] font-semibold text-[#f28b94] hover:bg-[#e35d6a]/25 disabled:opacity-50 cursor-pointer"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            <span>{lang === 'ar' ? 'رفض' : 'Reject'}</span>
+                          </button>
+                        </div>
+                      ) : msg.withdrawalActionStatus === 'confirmed' ? (
+                        <span className="text-[11.5px] text-[#00e344]">
+                          {t(lang, 'withdrawalConfirmedTag')}
+                        </span>
+                      ) : msg.withdrawalActionStatus === 'rejected' ? (
+                        <span className="text-[11.5px] text-[#c7b3b6]">
+                          {t(lang, 'withdrawalRejectedTag')}
+                        </span>
+                      ) : (
+                        <span className="text-[#8e7a7d]">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-[12px] font-mono-num text-[#a38f92] whitespace-nowrap">
+                      {formatDateTime(msg.receivedAt, settings)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <DetailDrawer
+        open={Boolean(selected)}
+        lang={lang}
+        section={t(lang, 'messages')}
+        title={selected?.sender ?? ''}
+        status={
+          selected?.withdrawalActionStatus === 'pending_confirmation'
+            ? 'awaiting_confirmation'
+            : selected?.withdrawalActionStatus === 'confirmed'
+            ? 'completed'
+            : selected?.withdrawalActionStatus === 'rejected'
+            ? 'cancelled'
+            : selected?.status
+        }
+        copyText={selected?.body}
+        onCopySuccess={() => onNotify('success', t(lang, 'copied'))}
+        onClose={() => setSelectedId(null)}
+        actions={drawerActions}
+      >
+        {selected && (
+          <div className="space-y-4">
+            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 p-4">
+              <div className="text-[12px] text-[#a38f92] mb-1.5">{t(lang, 'smsBody')}</div>
+              <p className="text-[13.5px] text-white leading-relaxed">{selected.body}</p>
+            </div>
+
+            {selected.withdrawalActionStatus && (
+              <div className="rounded-[12px] border border-[#c4454b]/35 bg-[#c4454b]/14 p-4 space-y-2 text-[13px]">
+                <div className="font-semibold text-[#f09599]">
+                  {lang === 'ar' ? 'تفاصيل طلب السحب' : 'Withdrawal Request Details'}
+                </div>
+                {selected.withdrawalDestination && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[#c7b3b6]">{t(lang, 'destinationMethod')}</span>
+                    <span className="text-white font-medium">{selected.withdrawalDestination}</span>
+                  </div>
+                )}
+                {selected.withdrawalRecipient && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[#c7b3b6]">{t(lang, 'recipientName')}</span>
+                    <span className="text-white">{selected.withdrawalRecipient}</span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#c7b3b6]">{t(lang, 'amount')}</span>
+                  <span className="font-mono-num font-bold text-[#00e344]">
+                    {formatMoney(selected.withdrawalAmountEgp ?? selected.parsedAmount ?? 0)} {currLabel}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 p-4 space-y-2.5 text-[13px]">
+              <div className="flex justify-between">
+                <span className="text-[#a38f92]">{lang === 'ar' ? 'المصدر' : 'Source'}</span>
+                <span className="text-white">{selected.deviceName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#a38f92]">{t(lang, 'amount')}</span>
+                <span className="font-mono-num text-[#00e344]">
+                  {(selected.withdrawalAmountEgp ?? selected.parsedAmount) !== null
+                    ? `${formatMoney((selected.withdrawalAmountEgp ?? selected.parsedAmount) as number)} ${currLabel}`
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#a38f92]">{t(lang, 'matchedOrder')}</span>
+                <span className="font-mono-num text-[#f09599]">{selected.matchedOrderId ?? '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#a38f92]">{t(lang, 'date')}</span>
+                <span className="font-mono-num text-[#c7b3b6]">
+                  {formatDateTime(selected.receivedAt, settings)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </DetailDrawer>
+    </div>
+  );
+}

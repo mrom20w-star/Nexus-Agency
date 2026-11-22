@@ -1,0 +1,40 @@
+{
+  "sessionSecret": "f973dafa04ff3cc1b20ef039a84f37ff07b7f5769a20ffc7ce9562bf299c80ae",
+  "config": {
+    "platformName": "Nexus Agency",
+    "countryCode": "EG",
+    "currencyCode": "EGP",
+    "usdRate": 49.85,
+    "defaultDepositNumber": "",
+    "depositMethodNumbers": {
+      "vodafone": "",
+      "etisalat": "",
+      "orange": "",
+      "binance": ""
+    }
+  },
+  "users": [],
+  "onlinePresence": [
+    {
+      "visitorId": "vis_1795311758477_u2qggr",
+      "userId": null,
+      "playerId": null,
+      "userName": null,
+      "email": null,
+      "route": "/admin",
+      "lastPingAt": "2026-11-22T09:52:26.834Z",
+      "lastPingMs": 1795341146834
+    }
+  ],
+  "requisites": [],
+  "deposits": [],
+  "disputes": [],
+  "withdrawals": [],
+  "androidDevices": [],
+  "telegramBots": [],
+  "apiKeys": [],
+  "messages": [],
+  "topUps": [],
+  "referrals": [],
+  "userSettings": {}
+}

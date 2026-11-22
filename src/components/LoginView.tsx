@@ -1,0 +1,148 @@
+import React, { useState } from 'react';
+import { Lock, Mail, ShieldAlert } from 'lucide-react';
+import { HostapayLogo } from './HpayIcons';
+import { Language } from '../types';
+
+export function LoginView({
+  lang,
+  platformName,
+  countryCode = 'EG',
+  onLogin,
+  onToggleLang,
+}: {
+  lang: Language;
+  platformName: string;
+  countryCode?: 'SA' | 'EG' | 'AE' | 'KG';
+  onLogin: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  onToggleLang: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!email.trim() || !password) {
+      setError(
+        lang === 'ar'
+          ? 'من فضلك اكتب البريد الإلكتروني وكلمة المرور الأول'
+          : 'Please enter both email and password'
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await onLogin(email.trim(), password);
+      if (!res.ok) {
+        setError(
+          res.error ||
+            (lang === 'ar'
+              ? 'البريد الإلكتروني أو كلمة المرور مش صح، أو الحساب لسه متفعلش من الأدمن'
+              : 'Invalid credentials or account not activated by admin')
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+      className="min-h-dvh w-full bg-[#0f0b0c] bg-[radial-gradient(ellipse_at_top,rgba(196,69,75,0.20),transparent_60%)] flex flex-col items-center justify-center p-4"
+    >
+      <div className="w-full max-w-[430px] rounded-[20px] border border-[#c4454b]/25 bg-[#191113]/75 backdrop-blur-xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.6)] space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <HostapayLogo platformName={platformName} countryCode={countryCode} />
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onToggleLang}
+              className="rounded-lg border border-[#c4454b]/25 bg-[#24181b]/75 px-2.5 py-1 text-[12px] text-[#d8c7c9] hover:text-white cursor-pointer"
+            >
+              {lang === 'ar' ? 'EN' : 'مصري'}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h1 className="text-[20px] font-bold text-white">
+            {lang === 'ar' ? 'تسجيل دخول الوكيل' : 'Agent Sign In'}
+          </h1>
+          <p className="mt-1 text-[13px] text-[#baa6a9]">
+            {lang === 'ar'
+              ? 'اكتب البريد الإلكتروني والباسورد اللي استلمتهم من الإدارة عشان تدخل حسابك على طول'
+              : 'Enter the email and password issued by the administrator to access your desk'}
+          </p>
+        </div>
+
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-[12px] border border-[#e35d6a]/40 bg-[#e35d6a]/12 p-3 text-[12.5px] text-[#fda4af]">
+            <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-medium text-[#d8c7c9] block">
+              {lang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-[#9e868a]" />
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="agent@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 ps-10 pe-3 py-2.5 text-[13.5px] text-white placeholder:text-[#7a6468] outline-none focus:border-[#d15b62]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-medium text-[#d8c7c9] block">
+              {lang === 'ar' ? 'كلمة المرور' : 'Password'}
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-[#9e868a]" />
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 ps-10 pe-3 py-2.5 text-[13.5px] text-white placeholder:text-[#7a6468] outline-none focus:border-[#d15b62]"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full rounded-[10px] bg-[#b83b44]/85 hover:bg-[#c94a53]/90 border border-[#f29b9f]/25 py-3 text-[14px] font-semibold text-white backdrop-blur-md shadow-[0_8px_24px_rgba(184,59,68,0.25)] disabled:opacity-60 transition-colors cursor-pointer"
+          >
+            {submitting
+              ? lang === 'ar'
+                ? 'جاري تسجيل الدخول...'
+                : 'Signing in...'
+              : lang === 'ar'
+              ? 'دخول على المنصة'
+              : 'Sign In to Desk'}
+          </button>
+        </form>
+
+        <div className="rounded-[10px] border border-[#c4454b]/18 bg-[#120c0e]/65 px-3.5 py-2.5 text-center text-[12px] text-[#9e868a]">
+          {lang === 'ar'
+            ? 'إنشاء الحسابات مغلق — الدخول متاح فقط عبر الحسابات المفعّلة من الإدارة'
+            : 'Self-registration is disabled. Accounts are provisioned by Admin only.'}
+        </div>
+      </div>
+    </div>
+  );
+}

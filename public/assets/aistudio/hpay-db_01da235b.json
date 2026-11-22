@@ -1,0 +1,76 @@
+{
+  "config": {
+    "platformName": "Nexus Agency",
+    "countryCode": "EG",
+    "currencyCode": "EGP",
+    "usdRate": 49.85,
+    "adminPassword": "admin123"
+  },
+  "users": [],
+  "onlinePresence": [
+    {
+      "visitorId": "vis_1795244561917_l4f4cv",
+      "userId": null,
+      "userName": null,
+      "email": null,
+      "route": "/profile",
+      "lastPingAt": "2026-11-21T19:12:54.713Z"
+    }
+  ],
+  "onlineCount": 0,
+  "profile": {
+    "traderId": "TRD-EG-001",
+    "displayName": "مكتب مصر للمدفوعات",
+    "email": "",
+    "telegramHandle": "@egyptpay_desk",
+    "twoFactorEnabled": true,
+    "referralCode": "EG-ELITE-01",
+    "referralRatePct": 0.5,
+    "trc20Address": "TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1"
+  },
+  "currentAccountId": "acc_egp_guest",
+  "accounts": [
+    {
+      "account_id": "acc_egp_guest",
+      "uuid": "01a1a848-4f12-7901-b4a2-884019e3c102",
+      "username": "guest_egp",
+      "countryCode": "EG",
+      "label": "EG | EGP · مصر",
+      "labelEn": "EG | EGP",
+      "currency": "EGP",
+      "balanceUsdt": 0,
+      "frozenUsdt": 0,
+      "insuranceAmount": null,
+      "rate": 49.85,
+      "canTrade": false,
+      "depositFeePct": 3,
+      "withdrawalFeePct": 1.8
+    }
+  ],
+  "requisites": [],
+  "deposits": [],
+  "disputes": [],
+  "withdrawals": [],
+  "androidDevices": [],
+  "telegramBots": [],
+  "apiKeys": [],
+  "messages": [],
+  "topUps": [],
+  "referrals": [],
+  "settings": {
+    "lang": "ar",
+    "tzOffset": 2,
+    "dateFormat": "DD.MM.YYYY",
+    "clockFormat": "24h",
+    "compactTables": false,
+    "mirrorHeader": false,
+    "compactCards": false,
+    "hideRowNumbers": false,
+    "fullRowTint": false,
+    "tableZoom": 100,
+    "sidebarCollapsedDesktop": false,
+    "notificationPosition": "bottom-right",
+    "skipConfirm": false,
+    "defaultLanding": "/profile"
+  }
+}
