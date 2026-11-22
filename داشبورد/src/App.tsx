@@ -456,6 +456,15 @@ function AdminAppInner() {
             }
           }
 
+          const probed = await probeBackend(true);
+          if (probed.mode === 'firebase') {
+            const res = await fetchFirestoreUsers();
+            if (res.ok && res.users) {
+              setState((prev) => ({ ...prev, users: res.users! }));
+            }
+            return;
+          }
+
           setState(loadAdminDb());
         }}
         onCreateUser={async (payload) => {

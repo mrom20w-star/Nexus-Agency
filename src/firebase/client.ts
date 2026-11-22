@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  initializeFirestore,
   onSnapshot,
   query,
   runTransaction,
@@ -44,8 +45,15 @@ export const firebaseConfig = {
   measurementId: 'G-F1M5B7V74R',
 };
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const firestoreDb = getFirestore(app);
+const isNewApp = getApps().length === 0;
+const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
+export const firestoreDb = (() => {
+  try {
+    return initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch {
+    return getFirestore(app);
+  }
+})();
 
 if (typeof window !== 'undefined') {
   isAnalyticsSupported()

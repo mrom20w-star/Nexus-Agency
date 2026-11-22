@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
   ArrowDownLeft,
-  ArrowUpRight,
   Check,
   CheckCircle2,
   Coins,
@@ -718,6 +718,45 @@ export function AdminDashboardPage({
 
         {/* Main Workspace */}
         <div className="flex-1 min-w-0 space-y-5">
+          {connectionMode === 'local' && (
+            <div className="rounded-[15px] border border-amber-400/45 bg-amber-500/12 backdrop-blur-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-[0_10px_28px_rgba(0,0,0,0.3)]">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 border border-amber-400/35 text-amber-300 mt-0.5">
+                  <AlertTriangle className="h-5 w-5" />
+                </span>
+                <div className="space-y-1 text-[12.5px]">
+                  <div className="font-bold text-amber-200">
+                    {connectionStatus === 'permission_denied'
+                      ? `صلاحيات قواعد Firestore مرفوضة في مشروع (${firebaseProjectId})`
+                      : `قاعدة بيانات Firestore غير مفعّلة بعد في مشروع Firebase (${firebaseProjectId})`}
+                  </div>
+                  <div className="text-amber-100/85 leading-relaxed">
+                    {connectionStatus === 'permission_denied'
+                      ? 'الحسابات لن تفتح على الموقع الرئيسي حتى تجعل Firestore Rules تسمح بالقراءة والكتابة (allow read, write: if true;).'
+                      : 'أي حساب تنشئه الآن يُحفظ في هذا المتصفح فقط ولن يفتح في الموقع الرئيسي! فعّل Firestore Database في لوحة Firebase لمشروع moorrcv ليعمل الحساب فوراً على الموقع ومن أي جهاز.'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`https://console.firebase.google.com/project/${firebaseProjectId}/firestore`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-[10px] border border-amber-300/40 bg-amber-400/20 hover:bg-amber-400/30 px-3.5 py-2 text-[12px] font-bold text-amber-100 transition-colors whitespace-nowrap"
+                >
+                  تفعيل Firestore في {firebaseProjectId}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => onRefreshAdmin()}
+                  className="rounded-[10px] border border-[#c4454b]/35 bg-[#b83b44]/85 hover:bg-[#c94a53]/90 px-3.5 py-2 text-[12px] font-bold text-white cursor-pointer whitespace-nowrap"
+                >
+                  فحص الاتصال الآن
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* KPI Grid */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
             <div className="rounded-[15px] border border-[#c4454b]/25 bg-gradient-to-b from-[#241317]/75 to-[#160d10]/65 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.32)] p-4 flex items-center justify-between gap-2">
@@ -818,17 +857,29 @@ export function AdminDashboardPage({
                         });
                         if (res.ok) {
                           const pidText = res.user?.playerId ? ` · ${res.user.playerId}` : '';
-                          setCreateUserFeedback({
-                            type: 'success',
-                            text: newUserActive
-                              ? `تم إنشاء الحساب وتفعيله للدخول فورًا (${cleanMail}${pidText})`
-                              : `تم إنشاء الحساب بحالة غير مفعّل (${cleanMail}${pidText}) — فعّله من الجدول لفتح الحساب`,
-                          });
-                          onNotify(
-                            'success',
-                            newUserActive ? 'تم إنشاء وتفعيل الحساب (رصيد 0 ج.م)' : 'تم إنشاء الحساب غير مفعّل (رصيد 0 ج.م)',
-                            `${cleanMail}${pidText}`
-                          );
+                          if (connectionMode === 'local') {
+                            setCreateUserFeedback({
+                              type: 'error',
+                              text: `تحذير: تم حفظ الحساب محليًا فقط (${cleanMail}${pidText}) ولن يفتح في الموقع الرئيسي قبل تفعيل Firestore في مشروع ${firebaseProjectId}!`,
+                            });
+                            onNotify(
+                              'warning',
+                              'تم الحفظ محليًا فقط (يلزم تفعيل Firestore)',
+                              `لن يفتح (${cleanMail}) على الموقع الرئيسي قبل تفعيل Firestore`
+                            );
+                          } else {
+                            setCreateUserFeedback({
+                              type: 'success',
+                              text: newUserActive
+                                ? `تم إنشاء الحساب وتفعيله للدخول فورًا (${cleanMail}${pidText})`
+                                : `تم إنشاء الحساب بحالة غير مفعّل (${cleanMail}${pidText}) — فعّله من الجدول لفتح الحساب`,
+                            });
+                            onNotify(
+                              'success',
+                              newUserActive ? 'تم إنشاء وتفعيل الحساب (رصيد 0 ج.م)' : 'تم إنشاء الحساب غير مفعّل (رصيد 0 ج.م)',
+                              `${cleanMail}${pidText}`
+                            );
+                          }
                           setNewEmail('');
                           setNewPassword('');
                           setNewDisplayName('');
