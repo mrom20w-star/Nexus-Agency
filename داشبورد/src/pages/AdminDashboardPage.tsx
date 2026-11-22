@@ -42,9 +42,13 @@ import {
 } from '../types';
 import { formatDateTime, formatMoney } from '../utils/format';
 
-export type ServerConnectionStatus = 'connecting' | 'connected' | 'offline';
-export type ConnectionMode = 'api' | 'php' | 'local';
-export type StorageMode = 'redis' | 'disk' | 'ephemeral_tmp';
+export type ServerConnectionStatus =
+  | 'connecting'
+  | 'connected'
+  | 'api_disabled'
+  | 'permission_denied'
+  | 'offline';
+export type ConnectionMode = 'firebase' | 'api' | 'php' | 'local';
 
 export interface AdminDashboardPageProps {
   state: PlatformState;
@@ -52,13 +56,10 @@ export interface AdminDashboardPageProps {
   needsSetup?: boolean;
   connectionStatus?: ServerConnectionStatus;
   connectionMode?: ConnectionMode;
-  storageMode?: StorageMode;
-  serverUrl?: string;
-  onSaveServerUrl?: (url: string) => Promise<{ ok: boolean; error?: string }>;
+  firebaseProjectId?: string;
   onAdminLogin: (password: string) => Promise<{ ok: boolean; error?: string }>;
   onAdminSetup?: (password: string) => Promise<{ ok: boolean; error?: string }>;
   onAdminLogout: () => void | Promise<void>;
-  onBackToAgent?: () => void;
   onRefreshAdmin: () => Promise<void>;
   onCreateUser: (payload: {
     email: string;
@@ -136,14 +137,11 @@ export function AdminDashboardPage({
   adminAuthed,
   needsSetup = false,
   connectionStatus = 'connected',
-  connectionMode = 'local',
-  storageMode,
-  serverUrl = '',
-  onSaveServerUrl,
+  connectionMode = 'firebase',
+  firebaseProjectId = 'moorrcv',
   onAdminLogin,
   onAdminSetup,
   onAdminLogout,
-  onBackToAgent,
   onRefreshAdmin,
   onCreateUser,
   onUpdateUser,
@@ -161,12 +159,6 @@ export function AdminDashboardPage({
   const [adminPassConfirm, setAdminPassConfirm] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(serverUrl);
-  const [connectingServer, setConnectingServer] = useState(false);
-  const [serverConnectMsg, setServerConnectMsg] = useState<{
-    type: 'success' | 'error';
-    text: string;
-  } | null>(null);
   const [tab, setTab] = useState<'users' | 'withdrawals' | 'orders' | 'settings'>('users');
   const [userSearch, setUserSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -282,10 +274,6 @@ export function AdminDashboardPage({
     setOrangeDepNum(state.config.depositMethodNumbers?.orange || '');
     setBinanceDepId(state.config.depositMethodNumbers?.binance || '');
   }, [state.config]);
-
-  useEffect(() => {
-    setServerUrlInput(serverUrl);
-  }, [serverUrl]);
 
   useEffect(() => {
     if ((!wdUserId || !users.some((u) => u.id === wdUserId)) && users[0]?.id) {
@@ -493,99 +481,43 @@ export function AdminDashboardPage({
                 ? 'حفظ كلمة المرور ودخول الإدارة'
                 : 'دخول لوحة الإدارة'}
             </button>
-
-            {onBackToAgent && (
-              <button
-                type="button"
-                onClick={onBackToAgent}
-                className="w-full rounded-[11px] border border-[#c4454b]/25 bg-[#241317]/65 py-2.5 text-[13px] font-medium text-[#d4c2c5] hover:text-white hover:border-[#c4454b]/45 transition-colors cursor-pointer whitespace-nowrap"
-              >
-                الرجوع لبوابة الوكلاء
-              </button>
-            )}
           </form>
 
-          {onSaveServerUrl && (
-            <div className="pt-3 border-t border-[#c4454b]/20 space-y-2.5">
-              <div className="flex items-center justify-between gap-2 text-[11.5px]">
-                <span className="text-[#d4c2c5] font-semibold flex items-center gap-1.5">
-                  <Database className="h-3.5 w-3.5 text-[#f09599]" />
-                  <span>ربط الداش بورد بالموقع الرئيسي</span>
-                </span>
-                <span
-                  className={`rounded-md px-2 py-0.5 text-[10.5px] font-bold ${
-                    connectionMode === 'api'
-                      ? 'bg-[#00e344]/15 text-[#00e344] border border-[#00e344]/30'
-                      : connectionMode === 'php'
-                      ? 'bg-[#00e344]/15 text-[#00e344] border border-[#00e344]/30'
-                      : 'bg-[#e35d6a]/15 text-[#fda4af] border border-[#e35d6a]/30'
-                  }`}
-                >
-                  {connectionMode === 'api'
-                    ? 'متصل بالسيرفر'
-                    : connectionMode === 'php'
-                    ? 'متصل (PHP)'
-                    : 'غير مربوط بالسيرفر'}
-                </span>
-              </div>
+          <div className="pt-3 border-t border-[#c4454b]/20 flex items-center justify-between gap-2 text-[11.5px]">
+            <span className="text-[#cbb6b9] flex items-center gap-1.5">
+              <Database className="h-3.5 w-3.5 text-[#f09599]" />
+              <span>حالة سيرفر Firebase ({firebaseProjectId})</span>
+            </span>
+            <span
+              className={`rounded-md px-2 py-0.5 text-[10.5px] font-bold ${
+                connectionMode === 'firebase' && connectionStatus === 'connected'
+                  ? 'bg-[#00e344]/15 text-[#00e344] border border-[#00e344]/30'
+                  : connectionMode === 'api' || connectionMode === 'php'
+                  ? 'bg-[#00e344]/15 text-[#00e344] border border-[#00e344]/30'
+                  : connectionStatus === 'connecting'
+                  ? 'bg-[#c4454b]/18 text-[#f09599] border border-[#c4454b]/30'
+                  : 'bg-[#e35d6a]/15 text-[#fda4af] border border-[#e35d6a]/30'
+              }`}
+            >
+              {connectionMode === 'firebase' && connectionStatus === 'connected'
+                ? 'متصل لايف'
+                : connectionMode === 'api'
+                ? 'متصل بالسيرفر'
+                : connectionMode === 'php'
+                ? 'متصل (PHP)'
+                : connectionStatus === 'connecting'
+                ? 'جاري الاتصال...'
+                : connectionStatus === 'api_disabled'
+                ? 'يلزم تفعيل Firestore'
+                : connectionStatus === 'permission_denied'
+                ? 'صلاحيات Rules مرفوضة'
+                : 'وضع محلي'}
+            </span>
+          </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="url"
-                  dir="ltr"
-                  value={serverUrlInput}
-                  onChange={(e) => setServerUrlInput(e.target.value)}
-                  placeholder="https://nexus-agency.vercel.app"
-                  className="flex-1 min-w-0 rounded-[9px] border border-[#c4454b]/25 bg-[#12090b]/75 px-3 py-2 text-[12px] font-mono-num text-white placeholder:text-[#786266] outline-none focus:border-[#d9535b]"
-                />
-                <button
-                  type="button"
-                  disabled={connectingServer}
-                  onClick={async () => {
-                    setServerConnectMsg(null);
-                    setConnectingServer(true);
-                    try {
-                      const res = await onSaveServerUrl(serverUrlInput);
-                      if (res.ok) {
-                        setServerConnectMsg({
-                          type: 'success',
-                          text: serverUrlInput.trim()
-                            ? 'تم ربط الداش بورد بسيرفر الموقع بنجاح'
-                            : 'تمت العودة للوضع التلقائي',
-                        });
-                      } else {
-                        setServerConnectMsg({
-                          type: 'error',
-                          text: res.error || 'تعذر الاتصال بالرابط المحدد',
-                        });
-                      }
-                    } finally {
-                      setConnectingServer(false);
-                    }
-                  }}
-                  className="rounded-[9px] border border-[#c4454b]/35 bg-[#b83b44]/75 hover:bg-[#c94a53]/90 px-3 py-2 text-[12px] font-semibold text-white shrink-0 cursor-pointer disabled:opacity-60 whitespace-nowrap"
-                >
-                  {connectingServer ? 'جاري الربط...' : 'ربط'}
-                </button>
-              </div>
-
-              {serverConnectMsg && (
-                <div
-                  className={`text-[11px] px-2.5 py-1.5 rounded-lg border ${
-                    serverConnectMsg.type === 'success'
-                      ? 'border-[#00e344]/35 bg-[#00e344]/10 text-[#00e344]'
-                      : 'border-[#e35d6a]/35 bg-[#e35d6a]/12 text-[#fda4af]'
-                  }`}
-                >
-                  {serverConnectMsg.text}
-                </div>
-              )}
-
-              {connectionMode === 'local' && !serverConnectMsg && (
-                <div className="text-[11px] text-[#cbb6b9] leading-relaxed">
-                  أدخل رابط موقع المنصة الرئيسي فوق واضغط <span className="text-white font-semibold">ربط</span> عشان الحسابات اللي تنشئها تفتح على الموقع من أي جهاز.
-                </div>
-              )}
+          {connectionStatus === 'api_disabled' && (
+            <div className="rounded-[10px] border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-[11.5px] text-amber-200 leading-relaxed">
+              خدمة Cloud Firestore غير مفعّلة بعد في مشروع Firebase ({firebaseProjectId}). فعّل Firestore من Firebase Console للمزامنة عبر كل الأجهزة.
             </div>
           )}
         </div>
@@ -662,28 +594,20 @@ export function AdminDashboardPage({
           >
             <Database className="h-3 w-3 shrink-0" />
             <span>
-              {connectionMode === 'api'
-                ? storageMode === 'ephemeral_tmp'
-                  ? 'متصل بسيرفر Vercel (مؤقت)'
-                  : 'متصل بسيرفر المنصة لايف'
+              {connectionMode === 'firebase'
+                ? `متصل بـ Firebase (${firebaseProjectId})`
+                : connectionMode === 'api'
+                ? 'متصل بسيرفر المنصة لايف'
                 : connectionMode === 'php'
                 ? 'متصل بسيرفر PHP'
-                : 'وضع محلي (غير مربوط)'}
+                : connectionStatus === 'api_disabled'
+                ? 'يلزم تفعيل Firestore'
+                : 'وضع محلي'}
             </span>
           </span>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {onBackToAgent && (
-            <button
-              type="button"
-              onClick={onBackToAgent}
-              className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[#c4454b]/25 bg-[#241317]/70 px-3 text-[12.5px] font-medium text-[#e6d5d8] hover:text-white hover:border-[#c4454b]/45 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-            >
-              <ArrowUpRight className="h-3.5 w-3.5 text-[#f09599] shrink-0" />
-              <span className="hidden sm:inline">واجهة الوكيل</span>
-            </button>
-          )}
 
           <button
             type="button"
@@ -2449,67 +2373,6 @@ export function AdminDashboardPage({
                 <div className="text-[15.5px] font-bold text-white">إعدادات المنصة وسعر الصرف</div>
                 <CountryFlagBadge code={state.config.countryCode} />
               </div>
-
-              {onSaveServerUrl && (
-                <div className="rounded-[12px] border border-[#c4454b]/25 bg-[#12090b]/65 backdrop-blur-md p-4 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-bold text-[#f09599]">
-                      رابط موقع المنصة الرئيسي (API Server)
-                    </span>
-                    <span className="text-[11px] text-[#cbb6b9]">
-                      {connectionMode === 'api'
-                        ? storageMode === 'redis'
-                          ? 'حفظ سحابي دائم (Redis)'
-                          : storageMode === 'ephemeral_tmp'
-                          ? 'Vercel مؤقت (فعّل Upstash Redis)'
-                          : 'سيرفر متصل'
-                        : connectionMode === 'php'
-                        ? 'PHP مشترك'
-                        : 'محلي فقط'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="url"
-                      dir="ltr"
-                      value={serverUrlInput}
-                      onChange={(e) => setServerUrlInput(e.target.value)}
-                      placeholder="https://nexus-agency.vercel.app"
-                      className="flex-1 min-w-0 rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
-                    />
-                    <button
-                      type="button"
-                      disabled={connectingServer}
-                      onClick={async () => {
-                        setServerConnectMsg(null);
-                        setConnectingServer(true);
-                        try {
-                          const res = await onSaveServerUrl(serverUrlInput);
-                          if (res.ok) {
-                            onNotify('success', 'تم تحديث رابط السيرفر بنجاح');
-                            setServerConnectMsg({ type: 'success', text: 'تم الاتصال بالسيرفر بنجاح' });
-                          } else {
-                            setServerConnectMsg({
-                              type: 'error',
-                              text: res.error || 'تعذر الاتصال بالسيرفر',
-                            });
-                          }
-                        } finally {
-                          setConnectingServer(false);
-                        }
-                      }}
-                      className="rounded-[9px] border border-[#f29b9f]/25 bg-[#b83b44]/85 hover:bg-[#c94a53]/90 px-3.5 py-2 text-[12.5px] font-semibold text-white cursor-pointer disabled:opacity-60 whitespace-nowrap"
-                    >
-                      {connectingServer ? 'جاري الفحص...' : 'حفظ وربط'}
-                    </button>
-                  </div>
-                  {storageMode === 'ephemeral_tmp' && (
-                    <div className="text-[11.5px] text-amber-300/90 leading-relaxed">
-                      ملاحظة: استضافة Vercel بدون قاعدة بيانات تحفظ البيانات مؤقتًا. لبقاء الحسابات والأرصدة دائمة عبر كل الهواتف، أضف Upstash Redis مجاناً من Vercel Storage.
-                    </div>
-                  )}
-                </div>
-              )}
 
               <form
                 onSubmit={async (e) => {

@@ -1,10 +1,28 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ToastContainer } from './components/ToastContainer';
 import {
+  clearFirestoreProbeCache,
+  createFirestoreUser,
+  deleteFirestoreUser,
+  fetchFirestoreUsers,
+  firebaseConfig,
+  getFirestoreAdminStatus,
+  sendFirestoreInstantDeposit,
+  sendFirestoreMessage,
+  sendFirestoreWithdrawal,
+  setFirestoreDepositNumber,
+  setupFirestoreAdminPassword,
+  subscribeAdminCollections,
+  updateFirestoreConfig,
+  updateFirestoreDeposit,
+  updateFirestoreUser,
+  updateFirestoreWithdrawal,
+  verifyFirestoreAdminPassword,
+} from './firebase/client';
+import {
   AdminDashboardPage,
   ConnectionMode,
   ServerConnectionStatus,
-  StorageMode,
 } from './pages/AdminDashboardPage';
 import { ManagedUser, PlatformState, ToastMessage } from './types';
 import {
@@ -17,39 +35,7 @@ import {
   verifyLocalAdminPassword,
 } from './utils/localStore';
 
-const SERVER_URL_STORAGE_KEY = 'nexus_dashboard_server_url';
 const ADMIN_TOKEN_STORAGE_KEY = 'nexus_dashboard_admin_token';
-
-function normalizeServerUrl(raw: string): string {
-  const trimmed = raw.trim().replace(/\/+$/, '');
-  if (!trimmed) return '';
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(trimmed)) {
-    return `http://${trimmed}`;
-  }
-  return `https://${trimmed}`;
-}
-
-function getInitialServerUrl(): string {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const fromQuery = params.get('api') || params.get('server');
-    if (fromQuery) {
-      const normalized = normalizeServerUrl(fromQuery);
-      if (normalized) {
-        localStorage.setItem(SERVER_URL_STORAGE_KEY, normalized);
-        return normalized;
-      }
-    }
-    const stored = localStorage.getItem(SERVER_URL_STORAGE_KEY);
-    if (stored) return normalizeServerUrl(stored);
-    const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
-    if (envUrl) return normalizeServerUrl(envUrl);
-  } catch {
-    // ignore storage errors
-  }
-  return '';
-}
 
 function loadStoredToken(): string | null {
   try {
@@ -121,10 +107,8 @@ function AdminAppInner() {
   const [state, setState] = useState<PlatformState>(() => loadAdminDb());
   const [adminAuthed, setAdminAuthed] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(() => needsLocalAdminSetup());
-  const [serverUrl, setServerUrl] = useState<string>(() => getInitialServerUrl());
   const [sessionToken, setSessionTokenState] = useState<string | null>(() => loadStoredToken());
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('local');
-  const [storageMode, setStorageMode] = useState<StorageMode | undefined>(undefined);
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('firebase');
   const [connectionStatus, setConnectionStatus] = useState<ServerConnectionStatus>('connecting');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -146,9 +130,9 @@ function AdminAppInner() {
     []
   );
 
+  // Same-origin Node/Vercel /api/* helper (used only when co-hosted and Firestore isn't enabled)
   const callApiEndpoint = useCallback(
     async (
-      baseUrl: string,
       path: string,
       options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; token?: string | null } = {}
     ): Promise<{ ok: boolean; status: number; data: Record<string, unknown> } | null> => {
@@ -164,11 +148,10 @@ function AdminAppInner() {
         if (activeToken) {
           headers['Authorization'] = `Bearer ${activeToken}`;
         }
-        const target = `${baseUrl}${path}`;
-        const res = await fetch(target, {
+        const res = await fetch(path, {
           method,
           headers,
-          credentials: baseUrl ? 'omit' : 'include',
+          credentials: 'include',
           body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
         });
         const ct = res.headers.get('content-type') || '';
@@ -182,7 +165,7 @@ function AdminAppInner() {
     []
   );
 
-  // Call PHP bridge (./admin-api.php) when deployed on cPanel / Apache / Nginx with PHP
+  // PHP bridge fallback (./admin-api.php) on cPanel / Apache
   const callPhpBridge = useCallback(
     async (action: string, payload?: Record<string, unknown>, tokenOverride?: string | null) => {
       const activeToken = tokenOverride ?? tokenRef.current;
@@ -227,17 +210,26 @@ function AdminAppInner() {
   }, []);
 
   const probeBackend = useCallback(
-    async (explicitBase?: string): Promise<{ ok: boolean; mode: ConnectionMode; error?: string }> => {
+    async (forceRefresh = false): Promise<{ ok: boolean; mode: ConnectionMode }> => {
       setConnectionStatus('connecting');
-      const targetBase = explicitBase !== undefined ? normalizeServerUrl(explicitBase) : serverUrl;
+      if (forceRefresh) {
+        clearFirestoreProbeCache();
+      }
 
-      // 1. Try explicit Remote Server URL OR same-origin Node/Vercel /api/*
-      const apiBaseToTry = targetBase || '';
-      const apiRes = await callApiEndpoint(apiBaseToTry, '/api/admin/auth-status');
+      // 1. Primary shared backend: Firebase Firestore (moorrcv)
+      const fsStatus = await getFirestoreAdminStatus();
+      if (fsStatus.ok) {
+        setConnectionMode('firebase');
+        setConnectionStatus('connected');
+        setNeedsSetup(fsStatus.needsSetup);
+        return { ok: true, mode: 'firebase' };
+      }
+
+      // 2. Fallback: Same-origin Node/Vercel /api/*
+      const apiRes = await callApiEndpoint('/api/admin/auth-status');
       if (apiRes && typeof apiRes.data.needsSetup === 'boolean') {
         setConnectionMode('api');
         setConnectionStatus('connected');
-        setStorageMode((apiRes.data.storageMode as StorageMode | undefined) ?? undefined);
         setNeedsSetup(Boolean(apiRes.data.needsSetup));
         setAdminAuthed(Boolean(apiRes.data.authenticated));
         if (apiRes.data.authenticated && apiRes.data.state) {
@@ -246,22 +238,11 @@ function AdminAppInner() {
         return { ok: true, mode: 'api' };
       }
 
-      if (explicitBase && explicitBase.trim()) {
-        setConnectionStatus('offline');
-        setConnectionMode('local');
-        return {
-          ok: false,
-          mode: 'local',
-          error: 'تعذر الوصول لسيرفر المنصة على الرابط ده — تأكد إن الموقع الرئيسي منشور وشغال',
-        };
-      }
-
-      // 2. Try PHP bridge (./admin-api.php)
+      // 3. Fallback: Same-origin PHP bridge (./admin-api.php)
       const phpRes = await callPhpBridge('status');
       if (phpRes && phpRes.ok === true) {
         setConnectionMode('php');
         setConnectionStatus('connected');
-        setStorageMode('disk');
         setNeedsSetup(Boolean(phpRes.needsSetup));
         setAdminAuthed(Boolean(phpRes.authenticated));
         if (phpRes.authenticated && phpRes.state) {
@@ -270,47 +251,57 @@ function AdminAppInner() {
         return { ok: true, mode: 'php' };
       }
 
-      // 3. Fallback to local browser persistence
+      // 4. Local fallback (clearly surfaces Firestore activation status if disabled)
       setConnectionMode('local');
-      setConnectionStatus('offline');
-      setStorageMode(undefined);
+      setConnectionStatus(fsStatus.reason || 'offline');
       setNeedsSetup(needsLocalAdminSetup());
       return { ok: false, mode: 'local' };
     },
-    [serverUrl, callApiEndpoint, callPhpBridge, applyReturnedState]
+    [callApiEndpoint, callPhpBridge, applyReturnedState]
   );
 
-  // Initial boot check
+  // Initial boot probe
   useEffect(() => {
     probeBackend().catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSaveServerUrl = useCallback(
-    async (rawUrl: string): Promise<{ ok: boolean; error?: string }> => {
-      const normalized = normalizeServerUrl(rawUrl);
-      setServerUrl(normalized);
-      try {
-        if (normalized) {
-          localStorage.setItem(SERVER_URL_STORAGE_KEY, normalized);
-        } else {
-          localStorage.removeItem(SERVER_URL_STORAGE_KEY);
-        }
-      } catch {
-        // ignore storage errors
-      }
-      setSessionToken(null);
-      setAdminAuthed(false);
-      const probe = await probeBackend(normalized);
-      if (normalized && !probe.ok) {
-        return { ok: false, error: probe.error };
-      }
-      return { ok: true };
-    },
-    [probeBackend, setSessionToken]
-  );
+  // Real-time Firebase Firestore subscriptions while admin is authenticated
+  useEffect(() => {
+    if (!adminAuthed || connectionMode !== 'firebase') return;
 
-  const activeApiBase = serverUrl;
+    const unsubscribe = subscribeAdminCollections({
+      onConfig: (config) => {
+        setState((prev) => ({
+          ...prev,
+          config: { ...config, platformName: FIXED_PLATFORM_NAME },
+        }));
+      },
+      onUsers: (users) => {
+        setState((prev) => ({ ...prev, users }));
+      },
+      onPresence: (onlinePresence) => {
+        setState((prev) => ({
+          ...prev,
+          onlinePresence,
+          onlineCount: onlinePresence.length,
+        }));
+      },
+      onWithdrawals: (withdrawals) => {
+        setState((prev) => ({ ...prev, withdrawals }));
+      },
+      onDeposits: (deposits) => {
+        setState((prev) => ({ ...prev, deposits }));
+      },
+      onMessages: (messages) => {
+        setState((prev) => ({ ...prev, messages }));
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [adminAuthed, connectionMode]);
 
   return (
     <>
@@ -320,13 +311,21 @@ function AdminAppInner() {
         needsSetup={needsSetup}
         connectionStatus={connectionStatus}
         connectionMode={connectionMode}
-        storageMode={storageMode}
-        serverUrl={serverUrl}
-        onSaveServerUrl={handleSaveServerUrl}
+        firebaseProjectId={firebaseConfig.projectId}
         onAdminSetup={async (pass) => {
           const cleanPass = pass.trim();
+          if (connectionMode === 'firebase') {
+            const fsRes = await setupFirestoreAdminPassword(cleanPass);
+            if (fsRes.ok) {
+              setNeedsSetup(false);
+              setAdminAuthed(true);
+              return { ok: true };
+            }
+            return { ok: false, error: fsRes.error || 'تعذر إعداد كلمة المرور على Firebase' };
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/setup', {
+            const apiRes = await callApiEndpoint('/api/admin/setup', {
               method: 'POST',
               body: { password: cleanPass },
             });
@@ -364,8 +363,17 @@ function AdminAppInner() {
         }}
         onAdminLogin={async (pass) => {
           const cleanPass = pass.trim();
+          if (connectionMode === 'firebase') {
+            const fsAuth = await verifyFirestoreAdminPassword(cleanPass);
+            if (fsAuth.ok) {
+              setAdminAuthed(true);
+              return { ok: true };
+            }
+            return { ok: false, error: fsAuth.error || 'كلمة مرور الأدمن مش صحيحة' };
+          }
+
           if (connectionMode === 'api') {
-            const apiAuth = await callApiEndpoint(activeApiBase, '/api/admin/login', {
+            const apiAuth = await callApiEndpoint('/api/admin/login', {
               method: 'POST',
               body: { password: cleanPass },
             });
@@ -408,7 +416,7 @@ function AdminAppInner() {
         }}
         onAdminLogout={async () => {
           if (connectionMode === 'api') {
-            await callApiEndpoint(activeApiBase, '/api/admin/logout', { method: 'POST' });
+            await callApiEndpoint('/api/admin/logout', { method: 'POST' });
           } else if (connectionMode === 'php') {
             await callPhpBridge('logout', {});
           }
@@ -416,13 +424,19 @@ function AdminAppInner() {
           setAdminAuthed(false);
         }}
         onRefreshAdmin={async () => {
+          if (connectionMode === 'firebase') {
+            const res = await fetchFirestoreUsers();
+            if (res.ok && res.users) {
+              setConnectionStatus('connected');
+              setState((prev) => ({ ...prev, users: res.users! }));
+            }
+            return;
+          }
+
           if (connectionMode === 'api') {
-            const apiState = await callApiEndpoint(activeApiBase, '/api/admin/state');
+            const apiState = await callApiEndpoint('/api/admin/state');
             if (apiState?.ok) {
               setConnectionStatus('connected');
-              if (apiState.data.storageMode) {
-                setStorageMode(apiState.data.storageMode as StorageMode);
-              }
               applyReturnedState(apiState.data);
               return;
             }
@@ -432,6 +446,7 @@ function AdminAppInner() {
               return;
             }
           }
+
           if (connectionMode === 'php') {
             const phpState = await callPhpBridge('state');
             if (phpState?.ok) {
@@ -440,11 +455,24 @@ function AdminAppInner() {
               return;
             }
           }
+
           setState(loadAdminDb());
         }}
         onCreateUser={async (payload) => {
+          if (connectionMode === 'firebase') {
+            const fsRes = await createFirestoreUser(payload);
+            if (fsRes.ok && fsRes.user) {
+              setState((prev) => ({
+                ...prev,
+                users: [fsRes.user!, ...prev.users.filter((u) => u.id !== fsRes.user!.id)],
+              }));
+              return { ok: true, user: fsRes.user };
+            }
+            return { ok: false, error: fsRes.error || 'تعذر إنشاء الحساب على Firebase' };
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/users', {
+            const apiRes = await callApiEndpoint('/api/admin/users', {
               method: 'POST',
               body: payload,
             });
@@ -478,9 +506,20 @@ function AdminAppInner() {
           };
         }}
         onUpdateUser={async (userId, patch) => {
+          if (connectionMode === 'firebase') {
+            const fsRes = await updateFirestoreUser(userId, patch);
+            if (fsRes.ok) {
+              setState((prev) => ({
+                ...prev,
+                users: prev.users.map((u) => (u.id === userId ? { ...u, ...patch } : u)),
+              }));
+              return { ok: true };
+            }
+            return { ok: false, error: fsRes.error || 'تعذر تحديث الحساب على Firebase' };
+          }
+
           if (connectionMode === 'api') {
             const apiRes = await callApiEndpoint(
-              activeApiBase,
               `/api/admin/users/${encodeURIComponent(userId)}`,
               {
                 method: 'PATCH',
@@ -510,9 +549,17 @@ function AdminAppInner() {
           return { ok: Boolean(localRes.ok), error: localRes.error };
         }}
         onDeleteUser={async (userId) => {
+          if (connectionMode === 'firebase') {
+            await deleteFirestoreUser(userId);
+            setState((prev) => ({
+              ...prev,
+              users: prev.users.filter((u) => u.id !== userId),
+            }));
+            return;
+          }
+
           if (connectionMode === 'api') {
             const apiRes = await callApiEndpoint(
-              activeApiBase,
               `/api/admin/users/${encodeURIComponent(userId)}`,
               { method: 'DELETE' }
             );
@@ -521,6 +568,7 @@ function AdminAppInner() {
               return;
             }
           }
+
           if (connectionMode === 'php') {
             const phpRes = await callPhpBridge('delete_user', { userId });
             if (phpRes?.ok) {
@@ -528,12 +576,25 @@ function AdminAppInner() {
               return;
             }
           }
+
           const localRes = await runLocalAdminAction('delete_user', { userId });
           if (localRes.state) setState(localRes.state);
         }}
         onSetDepositNumber={async (payload) => {
+          if (connectionMode === 'firebase') {
+            const fsRes = await setFirestoreDepositNumber(payload);
+            if (fsRes.ok && fsRes.user) {
+              setState((prev) => ({
+                ...prev,
+                users: prev.users.map((u) => (u.id === fsRes.user!.id ? fsRes.user! : u)),
+              }));
+              return { ok: true, user: fsRes.user };
+            }
+            return { ok: false, error: fsRes.error || 'تعذر حفظ رقم الإيداع' };
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/deposit-number', {
+            const apiRes = await callApiEndpoint('/api/admin/deposit-number', {
               method: 'POST',
               body: payload,
             });
@@ -564,8 +625,23 @@ function AdminAppInner() {
           };
         }}
         onSendWithdrawalToUser={async (payload) => {
+          if (connectionMode === 'firebase') {
+            const targetUser = state.users.find((u) => u.id === payload.userId);
+            if (!targetUser) return { ok: false, error: 'الحساب غير موجود' };
+            await sendFirestoreWithdrawal({
+              user: targetUser,
+              amountEgp: payload.amountEgp,
+              destinationMethod: payload.destinationMethod,
+              requisiteNumber: payload.requisiteNumber,
+              recipientName: payload.recipientName,
+              usdRate: state.config.usdRate,
+              note: payload.note,
+            });
+            return { ok: true };
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/withdrawals', {
+            const apiRes = await callApiEndpoint('/api/admin/withdrawals', {
               method: 'POST',
               body: payload,
             });
@@ -592,9 +668,12 @@ function AdminAppInner() {
           return { ok: Boolean(localRes.ok), error: localRes.error };
         }}
         onWithdrawalAction={async (id, action) => {
+          if (connectionMode === 'firebase') {
+            return updateFirestoreWithdrawal(id, action);
+          }
+
           if (connectionMode === 'api') {
             const apiRes = await callApiEndpoint(
-              activeApiBase,
               `/api/admin/withdrawals/${encodeURIComponent(id)}/action`,
               {
                 method: 'POST',
@@ -624,8 +703,27 @@ function AdminAppInner() {
           return { ok: Boolean(localRes.ok), error: localRes.error };
         }}
         onSendMessageToUser={async (payload) => {
+          if (connectionMode === 'firebase') {
+            const msgId = `msg_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
+            await sendFirestoreMessage({
+              id: msgId,
+              userId: payload.userId,
+              deviceId: 'admin_desk',
+              deviceName: 'إدارة المنصة',
+              sender: payload.sender.trim() || 'إدارة المنصة',
+              body: payload.body.trim(),
+              parsedAmount: payload.amountEgp ?? null,
+              currency: 'EGP',
+              matchedDepositId: null,
+              matchedOrderId: null,
+              status: 'unmatched',
+              receivedAt: new Date().toISOString(),
+            });
+            return;
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/messages', {
+            const apiRes = await callApiEndpoint('/api/admin/messages', {
               method: 'POST',
               body: payload,
             });
@@ -634,6 +732,7 @@ function AdminAppInner() {
               return;
             }
           }
+
           if (connectionMode === 'php') {
             const phpRes = await callPhpBridge('send_message', payload);
             if (phpRes?.ok) {
@@ -641,12 +740,20 @@ function AdminAppInner() {
               return;
             }
           }
+
           const localRes = await runLocalAdminAction('send_message', payload);
           if (localRes.state) setState(localRes.state);
         }}
         onCreateDepositForUser={async (payload) => {
+          if (connectionMode === 'firebase') {
+            return sendFirestoreInstantDeposit({
+              ...payload,
+              usdRate: state.config.usdRate,
+            });
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/deposits', {
+            const apiRes = await callApiEndpoint('/api/admin/deposits', {
               method: 'POST',
               body: payload,
             });
@@ -677,9 +784,13 @@ function AdminAppInner() {
           };
         }}
         onDepositAction={async (id, action) => {
+          if (connectionMode === 'firebase') {
+            await updateFirestoreDeposit(id, action);
+            return;
+          }
+
           if (connectionMode === 'api') {
             const apiRes = await callApiEndpoint(
-              activeApiBase,
               `/api/admin/deposits/${encodeURIComponent(id)}/action`,
               {
                 method: 'POST',
@@ -691,6 +802,7 @@ function AdminAppInner() {
               return;
             }
           }
+
           if (connectionMode === 'php') {
             const phpRes = await callPhpBridge('deposit_action', { id, action });
             if (phpRes?.ok) {
@@ -698,12 +810,29 @@ function AdminAppInner() {
               return;
             }
           }
+
           const localRes = await runLocalAdminAction('deposit_action', { id, action });
           if (localRes.state) setState(localRes.state);
         }}
         onUpdateConfig={async (patch) => {
+          if (connectionMode === 'firebase') {
+            const fsRes = await updateFirestoreConfig(patch);
+            if (fsRes.ok) {
+              setState((prev) => ({
+                ...prev,
+                config: {
+                  ...prev.config,
+                  ...patch,
+                  platformName: FIXED_PLATFORM_NAME,
+                },
+              }));
+              return { ok: true };
+            }
+            return { ok: false, error: fsRes.error || 'تعذر حفظ الإعدادات على Firebase' };
+          }
+
           if (connectionMode === 'api') {
-            const apiRes = await callApiEndpoint(activeApiBase, '/api/admin/config', {
+            const apiRes = await callApiEndpoint('/api/admin/config', {
               method: 'PATCH',
               body: patch,
             });

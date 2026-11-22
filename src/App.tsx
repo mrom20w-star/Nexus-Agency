@@ -6,6 +6,28 @@ import { SettingsDrawer } from './components/SettingsDrawer';
 import { Sidebar } from './components/Sidebar';
 import { ToastContainer } from './components/ToastContainer';
 import { TopHeader } from './components/TopHeader';
+import {
+  actFirestoreAgentDeposit,
+  actFirestoreWithdrawal,
+  claimFirestoreWithdrawal,
+  createFirestoreAgentDeposit,
+  createFirestoreAgentWithdrawal,
+  createFirestoreRequisite,
+  deleteFirestoreRequisite,
+  fetchAgentSliceFromFirestore,
+  fetchPublicConfigFromFirestore,
+  loginWithFirestore,
+  pingFirestorePresence,
+  probeFirestoreServer,
+  resolveFirestoreDispute,
+  respondFirestoreAdminWithdrawal,
+  respondFirestoreMessageWithdrawal,
+  simulateFirestoreSms,
+  subscribeAgentInFirestore,
+  updateFirestoreAgentFields,
+  updateFirestoreAgentSettings,
+  updateFirestoreRequisite,
+} from './firebase/client';
 import { DepositsPage } from './pages/DepositsPage';
 import { DisputesPage } from './pages/DisputesPage';
 import { MessagesPage } from './pages/MessagesPage';
@@ -36,6 +58,7 @@ const VALID_AGENT_ROUTES: RoutePath[] = [
 ];
 
 const AGENT_TOKEN_KEY = 'nexus_agent_token';
+const FS_UID_KEY = 'nexus_fs_uid';
 
 function loadStoredToken(key: string): string | null {
   try {
@@ -162,11 +185,27 @@ export default function App() {
   const [agentToken, setAgentTokenState] = useState<string | null>(() =>
     loadStoredToken(AGENT_TOKEN_KEY)
   );
+  const [fsUserId, setFsUserIdState] = useState<string | null>(() => loadStoredToken(FS_UID_KEY));
+  const [backendMode, setBackendMode] = useState<'firebase' | 'api'>('firebase');
   const [agentState, setAgentState] = useState<PlatformState>(EMPTY_STATE);
+
+  const fsUserIdRef = useRef<string | null>(fsUserId);
+  const backendModeRef = useRef<'firebase' | 'api'>(backendMode);
 
   const setAgentToken = useCallback((next: string | null) => {
     setAgentTokenState(next);
     persistStoredToken(AGENT_TOKEN_KEY, next);
+  }, []);
+
+  const setFsUserId = useCallback((next: string | null) => {
+    fsUserIdRef.current = next;
+    setFsUserIdState(next);
+    persistStoredToken(FS_UID_KEY, next);
+  }, []);
+
+  const updateBackendMode = useCallback((mode: 'firebase' | 'api') => {
+    backendModeRef.current = mode;
+    setBackendMode(mode);
   }, []);
 
   // UI controls
@@ -238,7 +277,7 @@ export default function App() {
           ok: false,
           error:
             res.status === 405
-              ? 'خادم الموقع لا يستقبل طلبات API حاليًا — تأكد من نشر التحديث الأخير لملف vercel.json ومجلد api'
+              ? 'خادم الموقع لا يستقبل طلبات API حاليًا'
               : `HTTP ${res.status}`,
         } as T & { ok?: boolean; error?: string };
       }
@@ -247,20 +286,68 @@ export default function App() {
     []
   );
 
+  const refreshFirestoreSlice = useCallback(async () => {
+    const uid = fsUserIdRef.current;
+    if (!uid) return;
+    const res = await fetchAgentSliceFromFirestore(uid);
+    if (res.ok && res.slice) {
+      setAgentState(res.slice);
+    } else if (res.inactive) {
+      setFsUserId(null);
+      setAgentAuthed(false);
+    }
+  }, [setFsUserId]);
+
   // Browser back/forward
   useEffect(() => {
     const onPop = () => {
-      setPathname(window.location.pathname || '/profile');
+      const next = window.location.pathname || '/profile';
+      if (next === '/admin' || next.startsWith('/admin/')) {
+        window.history.replaceState({}, '', '/profile');
+        setPathname('/profile');
+        return;
+      }
+      setPathname(next);
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  // Boot sequence: load public config + check agent session
+  // Boot sequence: try Firebase (moorrcv) first, fall back cleanly to /api/*
   const runBoot = useCallback(async () => {
     setBootError(null);
     setBootPhase('preparing');
     try {
+      const fsProbe = await probeFirestoreServer();
+      if (fsProbe.ok) {
+        updateBackendMode('firebase');
+        const cfg = await fetchPublicConfigFromFirestore();
+        if (cfg) {
+          setAgentState((prev) => ({ ...prev, config: cfg }));
+        }
+
+        setBootPhase('accounts');
+        const storedUid = loadStoredToken(FS_UID_KEY);
+        if (storedUid) {
+          const sliceRes = await fetchAgentSliceFromFirestore(storedUid);
+          if (sliceRes.ok && sliceRes.slice) {
+            fsUserIdRef.current = storedUid;
+            setFsUserIdState(storedUid);
+            setAgentState(sliceRes.slice);
+            setAgentAuthed(true);
+          } else {
+            setFsUserId(null);
+            setAgentAuthed(false);
+          }
+        } else {
+          setAgentAuthed(false);
+        }
+        setBootPhase('ready');
+        return;
+      }
+
+      // Fallback: same-origin Node / Vercel /api/*
+      updateBackendMode('api');
       const pubRes = await apiFetch<{ config?: PlatformConfig }>('/api/public/config');
       if (pubRes.ok && pubRes.data.config) {
         setAgentState((prev) => ({ ...prev, config: pubRes.data.config! }));
@@ -289,7 +376,14 @@ export default function App() {
           : 'Unable to reach server — please retry'
       );
     }
-  }, [apiFetch, agentToken, agentState.settings.lang, setAgentToken]);
+  }, [
+    apiFetch,
+    agentToken,
+    agentState.settings.lang,
+    setAgentToken,
+    setFsUserId,
+    updateBackendMode,
+  ]);
 
   useEffect(() => {
     runBoot();
@@ -297,9 +391,32 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Real-time polling for Agent Desk
+  // Real-time sync for Agent Desk (Firestore onSnapshot or API polling)
   useEffect(() => {
     if (!agentAuthed) return;
+
+    if (backendMode === 'firebase' && fsUserId) {
+      let pendingTimer: number | null = null;
+      const scheduleRefresh = () => {
+        if (pendingTimer !== null) return;
+        pendingTimer = window.setTimeout(() => {
+          pendingTimer = null;
+          refreshFirestoreSlice().catch(() => undefined);
+        }, 120);
+      };
+
+      const unsub = subscribeAgentInFirestore(fsUserId, scheduleRefresh, () => {
+        setFsUserId(null);
+        setAgentAuthed(false);
+        notify('error', 'تم تعطيل الحساب من الإدارة');
+      });
+
+      return () => {
+        if (pendingTimer !== null) window.clearTimeout(pendingTimer);
+        unsub();
+      };
+    }
+
     const timer = window.setInterval(async () => {
       const res = await apiFetch<{ slice?: PlatformState }>('/api/auth/me', { token: agentToken });
       if (res.ok && res.data.slice) {
@@ -310,11 +427,37 @@ export default function App() {
       }
     }, 4500);
     return () => window.clearInterval(timer);
-  }, [agentAuthed, agentToken, apiFetch, setAgentToken]);
+  }, [
+    agentAuthed,
+    backendMode,
+    fsUserId,
+    agentToken,
+    apiFetch,
+    setAgentToken,
+    setFsUserId,
+    refreshFirestoreSlice,
+    notify,
+  ]);
 
   // Presence ping
   useEffect(() => {
     const sendPing = () => {
+      if (backendModeRef.current === 'firebase') {
+        pingFirestorePresence(
+          visitorIdRef.current,
+          pathname,
+          agentAuthed && fsUserIdRef.current
+            ? {
+                id: fsUserIdRef.current,
+                playerId: agentState.profile.playerId,
+                displayName: agentState.profile.displayName,
+                email: agentState.profile.email,
+              }
+            : null
+        ).catch(() => undefined);
+        return;
+      }
+
       apiFetch('/api/presence/ping', {
         method: 'POST',
         token: agentToken,
@@ -324,10 +467,19 @@ export default function App() {
         },
       }).catch(() => undefined);
     };
+
     sendPing();
     const interval = window.setInterval(sendPing, 15000);
     return () => window.clearInterval(interval);
-  }, [pathname, agentToken, apiFetch]);
+  }, [
+    pathname,
+    agentToken,
+    agentAuthed,
+    agentState.profile.playerId,
+    agentState.profile.displayName,
+    agentState.profile.email,
+    apiFetch,
+  ]);
 
   // Ctrl+K / Cmd+K shortcut
   useEffect(() => {
@@ -374,13 +526,126 @@ export default function App() {
     [agentState.accounts, agentState.currentAccountId]
   );
 
-  // Agent action helper
+  // Agent action helper (routes to Firebase Firestore or /api/*)
   const agentMutate = useCallback(
     async (
       url: string,
       method: 'POST' | 'PATCH' | 'DELETE',
       body?: unknown
     ): Promise<{ ok: boolean; error?: string }> => {
+      if (backendModeRef.current === 'firebase' && fsUserIdRef.current) {
+        const uid = fsUserIdRef.current;
+        const payload = (body ?? {}) as Record<string, unknown>;
+        try {
+          if (url === '/api/agent/settings' && method === 'PATCH') {
+            await updateFirestoreAgentSettings(uid, payload as Partial<AppSettings>);
+          } else if (url === '/api/agent/trade-status' && method === 'PATCH') {
+            await updateFirestoreAgentFields(uid, { canTrade: Boolean(payload.canTrade) });
+          } else if (url === '/api/agent/2fa' && method === 'PATCH') {
+            await updateFirestoreAgentFields(uid, { twoFactorEnabled: Boolean(payload.enabled) });
+          } else if (url === '/api/agent/deposits' && method === 'POST') {
+            const r = await createFirestoreAgentDeposit(
+              uid,
+              payload as {
+                amountLocal: number;
+                paymentMethod: string;
+                senderNumber?: string;
+                note?: string;
+              }
+            );
+            if (!r.ok) return r;
+          } else if (url.startsWith('/api/agent/deposits/') && url.endsWith('/action')) {
+            const depId = decodeURIComponent(
+              url.replace('/api/agent/deposits/', '').replace('/action', '')
+            );
+            const r = await actFirestoreAgentDeposit(
+              uid,
+              depId,
+              payload.action as 'confirm' | 'cancel' | 'dispute'
+            );
+            if (!r.ok) return r;
+          } else if (url.startsWith('/api/agent/disputes/') && url.endsWith('/resolve')) {
+            const dspId = decodeURIComponent(
+              url.replace('/api/agent/disputes/', '').replace('/resolve', '')
+            );
+            const r = await resolveFirestoreDispute(
+              uid,
+              dspId,
+              String(payload.decision || ''),
+              payload.note ? String(payload.note) : undefined
+            );
+            if (!r.ok) return r;
+          } else if (url === '/api/agent/withdrawals' && method === 'POST') {
+            const r = await createFirestoreAgentWithdrawal(
+              uid,
+              payload as {
+                amountLocal: number;
+                destinationMethod: string;
+                requisiteNumber: string;
+                recipientName?: string;
+              }
+            );
+            if (!r.ok) return r;
+          } else if (url.startsWith('/api/agent/withdrawals/') && url.endsWith('/claim')) {
+            const wdId = decodeURIComponent(
+              url.replace('/api/agent/withdrawals/', '').replace('/claim', '')
+            );
+            await claimFirestoreWithdrawal(uid, wdId);
+          } else if (url.startsWith('/api/agent/withdrawals/') && url.endsWith('/respond')) {
+            const wdId = decodeURIComponent(
+              url.replace('/api/agent/withdrawals/', '').replace('/respond', '')
+            );
+            const r = await respondFirestoreAdminWithdrawal(
+              uid,
+              wdId,
+              payload.action as 'confirm' | 'reject'
+            );
+            if (!r.ok) return r;
+          } else if (url.startsWith('/api/agent/withdrawals/') && url.endsWith('/action')) {
+            const wdId = decodeURIComponent(
+              url.replace('/api/agent/withdrawals/', '').replace('/action', '')
+            );
+            const r = await actFirestoreWithdrawal(
+              uid,
+              wdId,
+              payload.action as 'upload_receipt' | 'complete' | 'cancel',
+              {
+                name: payload.fileName ? String(payload.fileName) : undefined,
+                size: payload.fileSize ? String(payload.fileSize) : undefined,
+              }
+            );
+            if (!r.ok) return r;
+          } else if (url === '/api/agent/messages/withdrawal-response' && method === 'POST') {
+            const r = await respondFirestoreMessageWithdrawal(
+              uid,
+              String(payload.messageId || ''),
+              payload.action as 'confirm' | 'reject'
+            );
+            if (!r.ok) return r;
+          } else if (url === '/api/agent/messages/simulate' && method === 'POST') {
+            await simulateFirestoreSms(uid);
+          } else if (url === '/api/agent/requisites' && method === 'POST') {
+            const r = await createFirestoreRequisite(uid, payload);
+            if (!r.ok) return r;
+          } else if (url.startsWith('/api/agent/requisites/') && method === 'PATCH') {
+            const reqId = decodeURIComponent(url.replace('/api/agent/requisites/', ''));
+            const r = await updateFirestoreRequisite(uid, reqId, payload);
+            if (!r.ok) return r;
+          } else if (url.startsWith('/api/agent/requisites/') && method === 'DELETE') {
+            const reqId = decodeURIComponent(url.replace('/api/agent/requisites/', ''));
+            await deleteFirestoreRequisite(uid, reqId);
+          }
+
+          await refreshFirestoreSlice();
+          return { ok: true };
+        } catch (err: unknown) {
+          return {
+            ok: false,
+            error: err instanceof Error ? err.message : 'تعذر تنفيذ العملية على Firebase',
+          };
+        }
+      }
+
       const res = await apiFetch<{ slice?: PlatformState }>(url, {
         method,
         body,
@@ -396,7 +661,7 @@ export default function App() {
       }
       return { ok: false, error: res.data.error };
     },
-    [apiFetch, agentToken, setAgentToken]
+    [apiFetch, agentToken, setAgentToken, refreshFirestoreSlice]
   );
 
   if (bootPhase !== 'ready') {
@@ -427,6 +692,23 @@ export default function App() {
             }))
           }
           onLogin={async (email, password) => {
+            const probe = await probeFirestoreServer();
+            if (probe.ok) {
+              updateBackendMode('firebase');
+              const fsRes = await loginWithFirestore(email, password);
+              if (fsRes.ok && fsRes.userId && fsRes.slice) {
+                setFsUserId(fsRes.userId);
+                setAgentState(fsRes.slice);
+                setAgentAuthed(true);
+                if (!isAgentRoute(pathname)) {
+                  navigateAgentRoute(fsRes.slice.settings?.defaultLanding || '/profile');
+                }
+                return { ok: true };
+              }
+              return { ok: false, error: fsRes.error };
+            }
+
+            updateBackendMode('api');
             const res = await apiFetch<{ token?: string; slice?: PlatformState }>(
               '/api/auth/login',
               {
@@ -514,6 +796,11 @@ export default function App() {
             updateSettings({ lang: activeSettings.lang === 'ar' ? 'en' : 'ar' })
           }
           onShowLogin={async () => {
+            if (backendModeRef.current === 'firebase') {
+              setFsUserId(null);
+              setAgentAuthed(false);
+              return;
+            }
             await apiFetch('/api/auth/logout', { method: 'POST', token: agentToken });
             setAgentToken(null);
             setAgentAuthed(false);

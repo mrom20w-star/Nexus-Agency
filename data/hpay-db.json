@@ -21,9 +21,9 @@
       "playerId": null,
       "userName": null,
       "email": null,
-      "route": "/admin",
-      "lastPingAt": "2026-11-22T09:52:26.834Z",
-      "lastPingMs": 1795341146834
+      "route": "/",
+      "lastPingAt": "2026-11-22T11:02:38.744Z",
+      "lastPingMs": 1795345358744
     }
   ],
   "requisites": [],
