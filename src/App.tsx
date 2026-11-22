@@ -234,7 +234,13 @@ export default function App() {
       try {
         data = (await res.json()) as T & { ok?: boolean; error?: string };
       } catch {
-        data = { ok: false, error: `HTTP ${res.status}` } as T & { ok?: boolean; error?: string };
+        data = {
+          ok: false,
+          error:
+            res.status === 405
+              ? 'خادم الموقع لا يستقبل طلبات API حاليًا — تأكد من نشر التحديث الأخير لملف vercel.json ومجلد api'
+              : `HTTP ${res.status}`,
+        } as T & { ok?: boolean; error?: string };
       }
       return { ok: res.ok && data.ok !== false, status: res.status, data };
     },
