@@ -468,7 +468,13 @@ function AdminAppInner() {
           setState(loadAdminDb());
         }}
         onCreateUser={async (payload) => {
-          if (connectionMode === 'firebase') {
+          let activeMode = connectionMode;
+          if (activeMode === 'local') {
+            const recheck = await probeBackend(true);
+            activeMode = recheck.mode;
+          }
+
+          if (activeMode === 'firebase') {
             const fsRes = await createFirestoreUser(payload);
             if (fsRes.ok && fsRes.user) {
               setState((prev) => ({
@@ -480,7 +486,7 @@ function AdminAppInner() {
             return { ok: false, error: fsRes.error || 'تعذر إنشاء الحساب على Firebase' };
           }
 
-          if (connectionMode === 'api') {
+          if (activeMode === 'api') {
             const apiRes = await callApiEndpoint('/api/admin/users', {
               method: 'POST',
               body: payload,
@@ -495,7 +501,7 @@ function AdminAppInner() {
             };
           }
 
-          if (connectionMode === 'php') {
+          if (activeMode === 'php') {
             const phpRes = await callPhpBridge('create_user', payload);
             if (phpRes?.ok && phpRes.user) {
               applyReturnedState(phpRes);
@@ -506,12 +512,10 @@ function AdminAppInner() {
             }
           }
 
-          const localRes = await runLocalAdminAction('create_user', payload);
-          if (localRes.ok && localRes.state) setState(localRes.state);
           return {
-            ok: Boolean(localRes.ok),
-            error: localRes.error,
-            user: localRes.user,
+            ok: false,
+            error:
+              'تعذر حفظ الحساب في قاعدة بيانات Firebase (moorrcv) — تحقق من الاتصال وصلاحيات Firestore ثم اضغط فحص الاتصال الآن',
           };
         }}
         onUpdateUser={async (userId, patch) => {

@@ -7,14 +7,12 @@ import {
   getDoc,
   getDocs,
   getFirestore,
-  initializeFirestore,
-  onSnapshot,
   query,
   runTransaction,
   setDoc,
   updateDoc,
   where,
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import {
   AccountDesk,
   ALLOWED_PAYMENT_METHODS,
@@ -47,13 +45,7 @@ export const firebaseConfig = {
 
 const isNewApp = getApps().length === 0;
 const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
-export const firestoreDb = (() => {
-  try {
-    return initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
-  } catch {
-    return getFirestore(app);
-  }
-})();
+export const firestoreDb = getFirestore(app);
 
 if (typeof window !== 'undefined') {
   isAnalyticsSupported()
@@ -436,51 +428,30 @@ export function subscribeAgentInFirestore(
   onSliceRefresh: () => void,
   onDeactivated: () => void
 ): () => void {
-  const unsubs: Array<() => void> = [];
+  let stopped = false;
 
-  unsubs.push(
-    onSnapshot(doc(firestoreDb, 'users', userId), (snap) => {
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const snap = await getDoc(doc(firestoreDb, 'users', userId));
+      if (stopped) return;
       if (!snap.exists() || snap.data().active === false) {
         onDeactivated();
         return;
       }
       onSliceRefresh();
-    })
-  );
-  unsubs.push(onSnapshot(doc(firestoreDb, 'platform_meta', 'config'), () => onSliceRefresh()));
-  unsubs.push(
-    onSnapshot(
-      query(collection(firestoreDb, 'deposits'), where('userId', '==', userId)),
-      () => onSliceRefresh()
-    )
-  );
-  unsubs.push(
-    onSnapshot(
-      query(collection(firestoreDb, 'withdrawals'), where('userId', '==', userId)),
-      () => onSliceRefresh()
-    )
-  );
-  unsubs.push(
-    onSnapshot(
-      query(collection(firestoreDb, 'messages'), where('userId', '==', userId)),
-      () => onSliceRefresh()
-    )
-  );
-  unsubs.push(
-    onSnapshot(
-      query(collection(firestoreDb, 'requisites'), where('userId', '==', userId)),
-      () => onSliceRefresh()
-    )
-  );
-  unsubs.push(
-    onSnapshot(
-      query(collection(firestoreDb, 'disputes'), where('userId', '==', userId)),
-      () => onSliceRefresh()
-    )
-  );
+    } catch {
+      // ignore transient network glitches during poll
+    }
+  };
+
+  const timer = globalThis.setInterval(() => {
+    poll().catch(() => undefined);
+  }, 3500);
 
   return () => {
-    for (const u of unsubs) u();
+    stopped = true;
+    globalThis.clearInterval(timer);
   };
 }
 
@@ -565,6 +536,9 @@ export async function createFirestoreAgentDeposit(
 
   const rate = Math.max(1, Number(cfg.usdRate) || 49.85);
   const depId = `dep_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
+  const noteText = senderNumber
+    ? `محوّل من: ${senderNumber}${note ? ` · ${note}` : ''}`
+    : note;
   const dep: DepositOrder = {
     id: depId,
     userId,
@@ -582,9 +556,7 @@ export async function createFirestoreAgentDeposit(
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     confirmedAt: null,
-    customerNote: senderNumber
-      ? `محوّل من: ${senderNumber}${note ? ` · ${note}` : ''}`
-      : note || undefined,
+    ...(noteText ? { customerNote: noteText } : {}),
   };
 
   await setDoc(doc(firestoreDb, 'deposits', depId), dep);

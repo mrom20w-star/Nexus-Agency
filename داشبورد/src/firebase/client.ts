@@ -7,12 +7,10 @@ import {
   getDoc,
   getDocs,
   getFirestore,
-  initializeFirestore,
-  onSnapshot,
   runTransaction,
   setDoc,
   updateDoc,
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import { DepositOrder, ManagedUser, OnlinePresenceEntry, PlatformConfig, SmsMessage, WithdrawalOrder } from '../types';
 
 export const FIXED_PLATFORM_NAME = 'Nexus Agency';
@@ -28,13 +26,7 @@ export const firebaseConfig = {
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const firestoreDb = (() => {
-  try {
-    return initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
-  } catch {
-    return getFirestore(app);
-  }
-})();
+export const firestoreDb = getFirestore(app);
 
 if (typeof window !== 'undefined') {
   isAnalyticsSupported()
@@ -276,6 +268,82 @@ export async function fetchFirestoreUsers(): Promise<{ ok: boolean; users?: Mana
   return { ok: true, users };
 }
 
+export async function fetchAdminCollections(): Promise<{
+  ok: boolean;
+  config?: PlatformConfig;
+  users?: ManagedUser[];
+  presence?: OnlinePresenceEntry[];
+  withdrawals?: WithdrawalOrder[];
+  deposits?: DepositOrder[];
+  messages?: SmsMessage[];
+}> {
+  try {
+    const [cfgSnap, usersSnap, presSnap, wdSnap, depSnap, msgSnap] = await Promise.all([
+      getDoc(doc(firestoreDb, 'platform_meta', 'config')),
+      getDocs(collection(firestoreDb, 'users')),
+      getDocs(collection(firestoreDb, 'online_presence')),
+      getDocs(collection(firestoreDb, 'withdrawals')),
+      getDocs(collection(firestoreDb, 'deposits')),
+      getDocs(collection(firestoreDb, 'messages')),
+    ]);
+
+    let config: PlatformConfig | undefined;
+    if (cfgSnap.exists()) {
+      const d = cfgSnap.data() as Record<string, unknown>;
+      config = {
+        platformName: FIXED_PLATFORM_NAME,
+        countryCode: (d.countryCode as PlatformConfig['countryCode']) || 'EG',
+        currencyCode: String(d.currencyCode || 'EGP'),
+        usdRate: Math.max(1, Number(d.usdRate) || 49.85),
+        defaultDepositNumber: String(d.defaultDepositNumber || ''),
+        depositMethodNumbers: {
+          vodafone: String(
+            (d.depositMethodNumbers as Record<string, unknown> | undefined)?.vodafone || ''
+          ),
+          etisalat: String(
+            (d.depositMethodNumbers as Record<string, unknown> | undefined)?.etisalat || ''
+          ),
+          orange: String(
+            (d.depositMethodNumbers as Record<string, unknown> | undefined)?.orange || ''
+          ),
+          binance: String(
+            (d.depositMethodNumbers as Record<string, unknown> | undefined)?.binance || ''
+          ),
+        },
+      };
+    }
+
+    const users = usersSnap.docs
+      .map((d) => sanitizeFirestoreUser({ ...d.data(), id: d.id }))
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+
+    const now = Date.now();
+    const presence = presSnap.docs
+      .map((d) => d.data() as OnlinePresenceEntry & { lastPingMs?: number })
+      .filter((entry) => {
+        const ms =
+          typeof entry.lastPingMs === 'number' ? entry.lastPingMs : Date.parse(entry.lastPingAt || '');
+        return Number.isFinite(ms) && now - ms <= 45000;
+      });
+
+    const withdrawals = wdSnap.docs
+      .map((d) => ({ ...(d.data() as WithdrawalOrder), id: d.id }))
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+
+    const deposits = depSnap.docs
+      .map((d) => ({ ...(d.data() as DepositOrder), id: d.id }))
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+
+    const messages = msgSnap.docs
+      .map((d) => ({ ...(d.data() as SmsMessage), id: d.id }))
+      .sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt));
+
+    return { ok: true, config, users, presence, withdrawals, deposits, messages };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export function subscribeAdminCollections(callbacks: {
   onConfig: (cfg: PlatformConfig) => void;
   onUsers: (users: ManagedUser[]) => void;
@@ -284,114 +352,27 @@ export function subscribeAdminCollections(callbacks: {
   onDeposits: (items: DepositOrder[]) => void;
   onMessages: (items: SmsMessage[]) => void;
 }): () => void {
-  const unsubs: Array<() => void> = [];
+  let stopped = false;
 
-  unsubs.push(
-    onSnapshot(
-      doc(firestoreDb, 'platform_meta', 'config'),
-      (snap) => {
-        if (!snap.exists()) return;
-        const d = snap.data() as Record<string, unknown>;
-        callbacks.onConfig({
-          platformName: FIXED_PLATFORM_NAME,
-          countryCode: (d.countryCode as PlatformConfig['countryCode']) || 'EG',
-          currencyCode: String(d.currencyCode || 'EGP'),
-          usdRate: Math.max(1, Number(d.usdRate) || 49.85),
-          defaultDepositNumber: String(d.defaultDepositNumber || ''),
-          depositMethodNumbers: {
-            vodafone: String(
-              (d.depositMethodNumbers as Record<string, unknown> | undefined)?.vodafone || ''
-            ),
-            etisalat: String(
-              (d.depositMethodNumbers as Record<string, unknown> | undefined)?.etisalat || ''
-            ),
-            orange: String(
-              (d.depositMethodNumbers as Record<string, unknown> | undefined)?.orange || ''
-            ),
-            binance: String(
-              (d.depositMethodNumbers as Record<string, unknown> | undefined)?.binance || ''
-            ),
-          },
-        });
-      },
-      () => undefined
-    )
-  );
+  const syncOnce = async () => {
+    const res = await fetchAdminCollections();
+    if (stopped || !res.ok) return;
+    if (res.config) callbacks.onConfig(res.config);
+    if (res.users) callbacks.onUsers(res.users);
+    if (res.presence) callbacks.onPresence(res.presence);
+    if (res.withdrawals) callbacks.onWithdrawals(res.withdrawals);
+    if (res.deposits) callbacks.onDeposits(res.deposits);
+    if (res.messages) callbacks.onMessages(res.messages);
+  };
 
-  unsubs.push(
-    onSnapshot(
-      collection(firestoreDb, 'users'),
-      (snap) => {
-        const list = snap.docs
-          .map((d) => sanitizeFirestoreUser({ ...d.data(), id: d.id }))
-          .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-        callbacks.onUsers(list);
-      },
-      () => undefined
-    )
-  );
-
-  unsubs.push(
-    onSnapshot(
-      collection(firestoreDb, 'online_presence'),
-      (snap) => {
-        const now = Date.now();
-        const active = snap.docs
-          .map((d) => d.data() as OnlinePresenceEntry & { lastPingMs?: number })
-          .filter((entry) => {
-            const ms =
-              typeof entry.lastPingMs === 'number'
-                ? entry.lastPingMs
-                : Date.parse(entry.lastPingAt || '');
-            return Number.isFinite(ms) && now - ms <= 45000;
-          });
-        callbacks.onPresence(active);
-      },
-      () => undefined
-    )
-  );
-
-  unsubs.push(
-    onSnapshot(
-      collection(firestoreDb, 'withdrawals'),
-      (snap) => {
-        const list = snap.docs
-          .map((d) => ({ ...(d.data() as WithdrawalOrder), id: d.id }))
-          .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-        callbacks.onWithdrawals(list);
-      },
-      () => undefined
-    )
-  );
-
-  unsubs.push(
-    onSnapshot(
-      collection(firestoreDb, 'deposits'),
-      (snap) => {
-        const list = snap.docs
-          .map((d) => ({ ...(d.data() as DepositOrder), id: d.id }))
-          .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-        callbacks.onDeposits(list);
-      },
-      () => undefined
-    )
-  );
-
-  unsubs.push(
-    onSnapshot(
-      collection(firestoreDb, 'messages'),
-      (snap) => {
-        const list = snap.docs
-          .map((d) => ({ ...(d.data() as SmsMessage), id: d.id }))
-          .sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt));
-        callbacks.onMessages(list);
-      },
-      () => undefined
-    )
-  );
+  syncOnce().catch(() => undefined);
+  const timer = globalThis.setInterval(() => {
+    syncOnce().catch(() => undefined);
+  }, 3500);
 
   return () => {
-    for (const u of unsubs) u();
+    stopped = true;
+    globalThis.clearInterval(timer);
   };
 }
 
@@ -410,51 +391,58 @@ export async function createFirestoreUser(payload: {
   }
   const emailLower = email.toLowerCase();
 
-  const existingSnap = await getDocs(collection(firestoreDb, 'users'));
-  const existingUsers = existingSnap.docs.map((d) =>
-    sanitizeFirestoreUser({ ...d.data(), id: d.id })
-  );
-  if (existingUsers.some((u) => u.email.trim().toLowerCase() === emailLower)) {
-    return { ok: false, error: 'البريد الإلكتروني مسجل من قبل' };
+  try {
+    const existingSnap = await getDocs(collection(firestoreDb, 'users'));
+    const existingUsers = existingSnap.docs.map((d) =>
+      sanitizeFirestoreUser({ ...d.data(), id: d.id })
+    );
+    if (existingUsers.some((u) => u.email.trim().toLowerCase() === emailLower)) {
+      return { ok: false, error: 'البريد الإلكتروني مسجل من قبل' };
+    }
+
+    const prefix = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'agent';
+    const playerId = generatePlayerId(existingUsers);
+    const id = `usr_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
+    const salt = randomSalt();
+    const passwordHash = await sha256Hex(`${salt}:${password}`);
+
+    const rawUser: ManagedUser & { passwordSalt: string; passwordHash: string } = {
+      id,
+      playerId,
+      uuid:
+        typeof globalThis.crypto !== 'undefined' && globalThis.crypto.randomUUID
+          ? globalThis.crypto.randomUUID()
+          : `01a1a848-${Date.now()}`,
+      username: (payload.username || `${prefix}_egp`).trim(),
+      displayName: (payload.displayName || prefix).trim(),
+      email,
+      emailLower,
+      passwordSalt: salt,
+      passwordHash,
+      hasPassword: true,
+      telegramHandle: `@${prefix}`,
+      balanceEgp: Math.max(0, Number(payload.balanceEgp) || 0),
+      frozenEgp: 0,
+      insuranceEgp: null,
+      canTrade: true,
+      active: payload.active !== false,
+      depositFeePct: 3.0,
+      withdrawalFeePct: 1.8,
+      referralCode: `EG-${playerId.replace('PL-', '')}`,
+      referralRatePct: 0.5,
+      twoFactorEnabled: true,
+      trc20Address: 'TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1',
+      createdAt: new Date().toISOString(),
+    };
+
+    await setDoc(doc(firestoreDb, 'users', id), rawUser);
+    return { ok: true, user: sanitizeFirestoreUser(rawUser as unknown as Record<string, unknown>) };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      error: err instanceof Error ? `تعذر الحفظ في Firebase: ${err.message}` : 'تعذر الحفظ في Firebase',
+    };
   }
-
-  const prefix = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'agent';
-  const playerId = generatePlayerId(existingUsers);
-  const id = `usr_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
-  const salt = randomSalt();
-  const passwordHash = await sha256Hex(`${salt}:${password}`);
-
-  const rawUser: ManagedUser & { passwordSalt: string; passwordHash: string } = {
-    id,
-    playerId,
-    uuid:
-      typeof globalThis.crypto !== 'undefined' && globalThis.crypto.randomUUID
-        ? globalThis.crypto.randomUUID()
-        : `01a1a848-${Date.now()}`,
-    username: (payload.username || `${prefix}_egp`).trim(),
-    displayName: (payload.displayName || prefix).trim(),
-    email,
-    emailLower,
-    passwordSalt: salt,
-    passwordHash,
-    hasPassword: true,
-    telegramHandle: `@${prefix}`,
-    balanceEgp: Math.max(0, Number(payload.balanceEgp) || 0),
-    frozenEgp: 0,
-    insuranceEgp: null,
-    canTrade: true,
-    active: payload.active !== false,
-    depositFeePct: 3.0,
-    withdrawalFeePct: 1.8,
-    referralCode: `EG-${playerId.replace('PL-', '')}`,
-    referralRatePct: 0.5,
-    twoFactorEnabled: true,
-    trc20Address: 'TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1',
-    createdAt: new Date().toISOString(),
-  };
-
-  await setDoc(doc(firestoreDb, 'users', id), rawUser);
-  return { ok: true, user: sanitizeFirestoreUser(rawUser as unknown as Record<string, unknown>) };
 }
 
 export async function updateFirestoreUser(
@@ -703,6 +691,7 @@ export async function sendFirestoreInstantDeposit(payload: {
     return uData;
   });
 
+  const cleanNote = (payload.note || '').trim();
   const dep: DepositOrder = {
     id: depId,
     userId: updatedUser.id,
@@ -720,7 +709,7 @@ export async function sendFirestoreInstantDeposit(payload: {
     createdAt: now,
     expiresAt: new Date(Date.now() + 900_000).toISOString(),
     confirmedAt: autoCredit ? now : null,
-    customerNote: (payload.note || '').trim() || undefined,
+    ...(cleanNote ? { customerNote: cleanNote } : {}),
   };
 
   const msg: SmsMessage = {
@@ -730,7 +719,7 @@ export async function sendFirestoreInstantDeposit(payload: {
     deviceName: 'إدارة المنصة',
     sender: 'إيداع رصيد فوري',
     body:
-      (payload.note || '').trim() ||
+      cleanNote ||
       `تم إيداع مبلغ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م في حسابك (${updatedUser.email}) بنجاح.`,
     parsedAmount: amount,
     currency: 'EGP',
