@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Copy, FileText, Info, Plus, Search, Upload, XCircle } from 'lucide-react';
 import { DetailDrawer, DrawerAction } from '../components/DetailDrawer';
 import { StatusBadge } from '../components/StatusBadge';
@@ -52,11 +52,24 @@ export function WithdrawalsPage({
 
   // Create withdrawal request state
   const [createOpen, setCreateOpen] = useState(false);
-  const [destinationMethod, setDestinationMethod] = useState<AllowedPaymentMethod>('فودافون كاش');
-  const [requisiteNumber, setRequisiteNumber] = useState('');
+  const [destinationMethod, setDestinationMethod] = useState<AllowedPaymentMethod>(() => {
+    const candidate = currentAccount.fixedDepositMethod as AllowedPaymentMethod | undefined;
+    return candidate && ALLOWED_PAYMENT_METHODS.includes(candidate) ? candidate : 'فودافون كاش';
+  });
+  const [requisiteNumber, setRequisiteNumber] = useState(currentAccount.fixedDepositNumber || '');
   const [recipientName, setRecipientName] = useState('');
   const [amountInput, setAmountInput] = useState('1000');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const candidate = currentAccount.fixedDepositMethod as AllowedPaymentMethod | undefined;
+    if (candidate && ALLOWED_PAYMENT_METHODS.includes(candidate)) {
+      setDestinationMethod(candidate);
+    }
+    if (currentAccount.fixedDepositNumber?.trim()) {
+      setRequisiteNumber(currentAccount.fixedDepositNumber.trim());
+    }
+  }, [currentAccount.fixedDepositMethod, currentAccount.fixedDepositNumber]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -234,7 +247,7 @@ export function WithdrawalsPage({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/26 bg-[#280e14]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
           <input
@@ -263,7 +276,7 @@ export function WithdrawalsPage({
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#c4454b]/40 bg-[#c4454b]/15 px-3.5 py-1.5 text-[13px] font-semibold text-[#f09599] hover:bg-[#c4454b]/25 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#c4454b]/40 bg-[#c4454b]/15 px-3.5 py-1.5 text-[13px] font-semibold text-[#f09599] hover:bg-[#c94a53]/25 cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>{lang === 'ar' ? 'إرسال طلب سحب للإدارة' : 'Submit Withdrawal Request'}</span>
@@ -271,7 +284,7 @@ export function WithdrawalsPage({
           </div>
         ) : (
           <table className="hpay-table w-full border-collapse text-start">
-            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#e05b64]/26">
+            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#c4454b]/26">
               <tr className="text-[12px] font-medium text-[#c7b3b6]">
                 {!settings.hideRowNumbers && <th className="py-3 px-4 text-start w-12">#</th>}
                 <th className="py-3 px-4 text-start">{t(lang, 'orderId')}</th>
@@ -290,7 +303,7 @@ export function WithdrawalsPage({
                   key={w.id}
                   onClick={() => setSelectedId(w.id)}
                   className={`cursor-pointer transition-colors ${
-                    w.id === selectedId ? 'bg-[#c4454b]/15' : 'hover:bg-[#1e1417]/75'
+                    w.id === selectedId ? 'bg-[#c4454b]/15' : 'hover:bg-[#1a1013]/75'
                   }`}
                 >
                   {!settings.hideRowNumbers && (
@@ -565,7 +578,7 @@ export function WithdrawalsPage({
                 <button
                   type="button"
                   onClick={() => copyVal(selected.requisiteNumber)}
-                  className="flex items-center gap-1.5 rounded-lg border border-[#c4454b]/28 bg-[#281b1e]/80 px-2.5 py-1 text-[12.5px] font-mono-num text-white hover:bg-[#322125] cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-lg border border-[#c4454b]/28 bg-[#280e14]/80 px-2.5 py-1 text-[12.5px] font-mono-num text-white hover:bg-[#311118] cursor-pointer"
                 >
                   <span>{selected.requisiteNumber}</span>
                   <Copy className="h-3 w-3 text-[#c7b3b6]" />
@@ -617,7 +630,7 @@ export function WithdrawalsPage({
                     {selected.receiptFiles.map((f, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between rounded-lg border border-[#e05b64]/24 bg-[#280e14]/65 px-3 py-2 text-[12.5px]"
+                        className="flex items-center justify-between rounded-lg border border-[#c4454b]/24 bg-[#280e14]/65 px-3 py-2 text-[12.5px]"
                       >
                         <span className="flex items-center gap-2 text-white truncate">
                           <FileText className="h-4 w-4 text-[#00e344] shrink-0" />

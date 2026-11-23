@@ -1,86 +1,56 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, CreditCard, Info, Plus, Search, Wallet } from 'lucide-react';
-import { DetailDrawer, DrawerAction } from '../components/DetailDrawer';
+import React, { useMemo, useState } from 'react';
+import { Copy, CreditCard, Lock, Search, Wallet } from 'lucide-react';
+import { DetailDrawer } from '../components/DetailDrawer';
 import { QrCodeSvg } from '../components/QrCodeSvg';
 import { StatusBadge } from '../components/StatusBadge';
 import { t } from '../i18n';
-import {
-  ALLOWED_PAYMENT_METHODS,
-  AllowedPaymentMethod,
-  AccountDesk,
-  AppSettings,
-  Requisite,
-} from '../types';
+import { AccountDesk, AppSettings, Requisite } from '../types';
 import { formatMoney } from '../utils/format';
 
 export function RequisitesPage({
   requisites,
   currentAccount,
   settings,
-  triggerCreate,
-  onClearTriggerCreate,
-  onCreate,
-  onUpdate,
-  onDelete,
   onNotify,
 }: {
   requisites: Requisite[];
   currentAccount: AccountDesk;
   settings: AppSettings;
-  triggerCreate: boolean;
-  onClearTriggerCreate: () => void;
-  onCreate: (data: Partial<Requisite>) => Promise<{ ok?: boolean; error?: string } | void>;
-  onUpdate: (id: string, data: Partial<Requisite>) => Promise<{ ok?: boolean; error?: string } | void>;
-  onDelete: (id: string) => Promise<void>;
   onNotify: (type: 'success' | 'error' | 'warning', title: string, message?: string) => void;
 }) {
   const lang = settings.lang;
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
 
-  const [bankName, setBankName] = useState<AllowedPaymentMethod>('فودافون كاش');
-  const [ownerName, setOwnerName] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [minOrder, setMinOrder] = useState('200');
-  const [maxOrder, setMaxOrder] = useState('30000');
-  const [dailyLimit, setDailyLimit] = useState('150000');
-  const [bidRate, setBidRate] = useState(String(currentAccount.depositFeePct));
-
-  const accountRequisites = useMemo(
-    () => requisites.filter((r) => r.accountId === currentAccount.account_id),
-    [requisites, currentAccount.account_id]
-  );
-
-  const hasReachedLimit = accountRequisites.length >= 1;
-
-  const openCreateDrawer = () => {
-    if (hasReachedLimit) {
-      onNotify(
-        'warning',
-        lang === 'ar' ? 'يُسمح بوسيلة دفع واحدة فقط' : 'Only 1 payment method allowed',
-        lang === 'ar' ? 'يمكنك تعديل أو حذف الوسيلة الحالية' : 'Edit or delete your existing method first'
-      );
-      return;
-    }
-    setSelectedId(null);
-    setBankName('فودافون كاش');
-    setOwnerName('');
-    setAccountNumber('');
-    setMinOrder('200');
-    setMaxOrder('30000');
-    setDailyLimit('150000');
-    setBidRate(String(currentAccount.depositFeePct));
-    setCreating(true);
-  };
-
-  useEffect(() => {
-    if (triggerCreate) {
-      openCreateDrawer();
-      onClearTriggerCreate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerCreate]);
+  const accountRequisites = useMemo(() => {
+    const matched = requisites.filter((r) => r.accountId === currentAccount.account_id);
+    if (matched.length > 0) return matched;
+    const fixedNum = (currentAccount.fixedDepositNumber || '').trim();
+    if (!fixedNum) return [];
+    const methodName = (currentAccount.fixedDepositMethod || '').trim() || 'فودافون كاش';
+    const synthesized: Requisite = {
+      id: `req_${currentAccount.account_id}`,
+      accountId: currentAccount.account_id,
+      bankName: methodName,
+      ownerName: currentAccount.username,
+      accountNumber: fixedNum,
+      type: methodName === 'باينانس' ? 'instapay' : 'wallet',
+      minOrder: 100,
+      maxOrder: 30000,
+      dailyLimit: 150000,
+      dailyUsed: 0,
+      bidRate: currentAccount.depositFeePct,
+      active: true,
+    };
+    return [synthesized];
+  }, [
+    requisites,
+    currentAccount.account_id,
+    currentAccount.fixedDepositNumber,
+    currentAccount.fixedDepositMethod,
+    currentAccount.username,
+    currentAccount.depositFeePct,
+  ]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -97,22 +67,9 @@ export function RequisitesPage({
   }, [accountRequisites, search]);
 
   const selected = useMemo(
-    () => requisites.find((r) => r.id === selectedId) ?? null,
-    [requisites, selectedId]
+    () => accountRequisites.find((r) => r.id === selectedId) ?? null,
+    [accountRequisites, selectedId]
   );
-
-  const selectForEdit = (req: Requisite) => {
-    setCreating(false);
-    setSelectedId(req.id);
-    const matchedMethod = ALLOWED_PAYMENT_METHODS.find((m) => m === req.bankName) ?? 'فودافون كاش';
-    setBankName(matchedMethod);
-    setOwnerName(req.ownerName);
-    setAccountNumber(req.accountNumber);
-    setMinOrder(String(req.minOrder));
-    setMaxOrder(String(req.maxOrder));
-    setDailyLimit(String(req.dailyLimit));
-    setBidRate(String(req.bidRate));
-  };
 
   const copyNum = async (num: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -124,93 +81,9 @@ export function RequisitesPage({
     }
   };
 
-  const drawerActions: DrawerAction[] = creating
-    ? [
-        {
-          label: t(lang, 'createRequisite'),
-          tone: 'primary',
-          onClick: async () => {
-            if (!accountNumber.trim()) {
-              onNotify(
-                'error',
-                lang === 'ar'
-                  ? 'أدخل رقم المحفظة أو عنوان باينانس'
-                  : 'Wallet number or Binance ID is required'
-              );
-              return;
-            }
-            const res = await onCreate({
-              accountId: currentAccount.account_id,
-              bankName,
-              ownerName: ownerName.trim() || currentAccount.username,
-              accountNumber: accountNumber.trim(),
-              type: bankName === 'باينانس' ? 'instapay' : 'wallet',
-              minOrder: Number(minOrder) || 200,
-              maxOrder: Number(maxOrder) || 25000,
-              dailyLimit: Number(dailyLimit) || 150000,
-              bidRate: Number(bidRate) || currentAccount.depositFeePct,
-            });
-            if (res && res.ok === false) {
-              onNotify('error', res.error || 'Error');
-              return;
-            }
-            setCreating(false);
-            onNotify('success', t(lang, 'createRequisite'), bankName);
-          },
-        },
-      ]
-    : selected
-    ? [
-        {
-          label: t(lang, 'updateRequisite'),
-          tone: 'primary',
-          onClick: async () => {
-            const res = await onUpdate(selected.id, {
-              bankName,
-              ownerName,
-              accountNumber,
-              type: bankName === 'باينانس' ? 'instapay' : 'wallet',
-              minOrder: Number(minOrder) || selected.minOrder,
-              maxOrder: Number(maxOrder) || selected.maxOrder,
-              dailyLimit: Number(dailyLimit) || selected.dailyLimit,
-              bidRate: Number(bidRate) || selected.bidRate,
-            });
-            if (res && res.ok === false) {
-              onNotify('error', res.error || 'Error');
-              return;
-            }
-            onNotify('success', t(lang, 'updateRequisite'));
-          },
-        },
-        {
-          label: selected.active ? t(lang, 'disable') : t(lang, 'enable'),
-          tone: 'secondary',
-          onClick: async () => {
-            await onUpdate(selected.id, { active: !selected.active });
-            onNotify('success', selected.active ? t(lang, 'paused') : t(lang, 'active'));
-          },
-        },
-        {
-          label: t(lang, 'deleteRequisite'),
-          tone: 'danger',
-          confirm: {
-            severity: 'danger',
-            title: t(lang, 'deleteRequisiteTitle'),
-            message: t(lang, 'deleteRequisiteMsg'),
-            confirmLabel: t(lang, 'deleteRequisite'),
-          },
-          onClick: async () => {
-            await onDelete(selected.id);
-            setSelectedId(null);
-            onNotify('error', t(lang, 'deleteRequisite'));
-          },
-        },
-      ]
-    : [];
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/26 bg-[#280e14]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
         <div className="relative flex-1 max-w-sm">
           <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
           <input
@@ -226,43 +99,42 @@ export function RequisitesPage({
           />
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateDrawer}
-          disabled={hasReachedLimit}
-          className={`flex h-9 items-center gap-1.5 rounded-[10px] px-3.5 text-[13px] font-semibold transition-colors whitespace-nowrap ${
-            hasReachedLimit
-              ? 'border border-[#c4454b]/18 bg-[#201518]/60 text-[#8e7a7d] cursor-not-allowed'
-              : 'border border-[#f29b9f]/25 bg-[#b83b44]/85 text-white hover:bg-[#c94a53]/90 backdrop-blur-md cursor-pointer'
-          }`}
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t(lang, 'createRequisite')}</span>
-        </button>
+        <div className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[#c4454b]/30 bg-[#201518]/80 px-3.5 text-[12px] font-semibold text-[#f3a6aa] whitespace-nowrap">
+          <Lock className="h-3.5 w-3.5 text-[#f09599]" />
+          <span>
+            {lang === 'ar' ? 'تعيين وتعديل من الإدارة فقط' : 'Managed by Admin Only'}
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-dark p-4 lg:p-6 space-y-4">
         <div className="flex items-start gap-2.5 rounded-[12px] border border-[#c4454b]/35 bg-[#c4454b]/14 px-4 py-3 text-[12.5px] text-[#f3a6aa]">
-          <Info className="h-4 w-4 text-[#f09599] shrink-0 mt-0.5" />
+          <Lock className="h-4 w-4 text-[#f09599] shrink-0 mt-0.5" />
           <span>
             {lang === 'ar'
-              ? 'يُسمح بإضافة وسيلة دفع واحدة فقط لكل حساب من الوسائل المتاحة: فودافون كاش، اتصالات كاش، أورنج كاش، أو باينانس.'
-              : 'Only 1 payment method is allowed per account from: Vodafone Cash, Etisalat Cash, Orange Cash, or Binance.'}
+              ? 'تتم إضافة وتعديل وسيلة الدفع ورقم المحفظة من لوحة تحكم الإدارة فقط عن طريق البريد الإلكتروني (Gmail)، ولا يمكن للوكيل إضافتهما أو تعديلهما.'
+              : 'Payment method and wallet number are assigned and managed exclusively by Admin from the Dashboard via your email and cannot be modified here.'}
           </span>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="flex h-56 flex-col items-center justify-center gap-3 text-[#a38f92]">
-            <p className="text-[14px]">{t(lang, 'nothingFound')}</p>
-            {!hasReachedLimit && (
-              <button
-                type="button"
-                onClick={openCreateDrawer}
-                className="flex items-center gap-1.5 rounded-[10px] border border-[#f29b9f]/25 bg-[#b83b44]/85 px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#c94a53]/90 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                <span>{t(lang, 'createRequisite')}</span>
-              </button>
+          <div className="flex h-60 flex-col items-center justify-center gap-3 rounded-[14px] border border-[#c4454b]/22 bg-[#201518]/55 px-6 text-center text-[#a38f92]">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#c4454b]/30 bg-[#c4454b]/12 text-[#f09599]">
+              <Wallet className="h-5 w-5" />
+            </span>
+            <p className="text-[14px] font-semibold text-white">
+              {search.trim()
+                ? t(lang, 'nothingFound')
+                : lang === 'ar'
+                ? 'لم يتم تعيين رقم محفظة لحسابك بعد'
+                : 'No wallet number assigned yet'}
+            </p>
+            {!search.trim() && (
+              <p className="max-w-md text-[12.5px] text-[#c7b3b6]">
+                {lang === 'ar'
+                  ? 'يتم ربط وسيلة الدفع ورقم المحفظة بحسابك من لوحة تحكم الإدارة فقط بالبريد الإلكتروني.'
+                  : 'Admin assigns your payment method and wallet number from the Dashboard using your email.'}
+              </p>
             )}
           </div>
         ) : (
@@ -278,13 +150,13 @@ export function RequisitesPage({
               return (
                 <div
                   key={req.id}
-                  onClick={() => selectForEdit(req)}
+                  onClick={() => setSelectedId(req.id)}
                   className={`rounded-[12px] border backdrop-blur-md transition-colors cursor-pointer ${
                     settings.compactCards ? 'p-3.5' : 'p-4'
                   } ${
                     req.id === selectedId
-                      ? 'border-[#d15b62] bg-[#25171b]/85'
-                      : 'border-[#e05b64]/26 bg-[#280e14]/56 hover:border-[#e05b64]/48 hover:bg-[#341219]/68'
+                      ? 'border-[#d15b62] bg-[#241317]/85'
+                      : 'border-[#c4454b]/26 bg-[#280e14]/56 hover:border-[#c4454b]/48 hover:bg-[#311118]/68'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -344,7 +216,7 @@ export function RequisitesPage({
                         {formatMoney(req.dailyUsed)} / {formatMoney(req.dailyLimit)} {currentAccount.currency}
                       </span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-[#2a1c20] overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-[#280e14] overflow-hidden">
                       <div
                         style={{ width: `${pct}%` }}
                         className={`h-full rounded-full ${
@@ -361,115 +233,86 @@ export function RequisitesPage({
       </div>
 
       <DetailDrawer
-        open={creating || Boolean(selected)}
+        open={Boolean(selected)}
         lang={lang}
         section={t(lang, 'requisite')}
-        title={creating ? t(lang, 'createRequisite') : selected?.bankName ?? ''}
+        title={selected?.bankName ?? ''}
         status={selected ? (selected.active ? 'active' : 'inactive') : undefined}
         copyText={selected?.accountNumber}
         skipConfirm={settings.skipConfirm}
         onCopySuccess={() => onNotify('success', t(lang, 'copied'))}
-        onClose={() => {
-          setCreating(false);
-          setSelectedId(null);
-        }}
-        actions={drawerActions}
+        onClose={() => setSelectedId(null)}
+        actions={[]}
       >
-        <div className="space-y-4">
-          {selected && (
+        {selected && (
+          <div className="space-y-4">
             <div className="flex flex-col items-center rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 p-4 gap-2">
               <QrCodeSvg value={`req:${selected.id}:${selected.accountNumber}`} size={124} />
               <span className="text-[11.5px] font-mono-num text-[#a38f92]">{selected.id}</span>
             </div>
-          )}
 
-          <Field label={lang === 'ar' ? 'اختر وسيلة دفع واحدة' : 'Select One Payment Method'}>
-            <div className="grid grid-cols-2 gap-2">
-              {ALLOWED_PAYMENT_METHODS.map((method) => {
-                const active = bankName === method;
-                return (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setBankName(method)}
-                    className={`rounded-[10px] border px-3 py-2.5 text-[13px] font-semibold transition-colors cursor-pointer ${
-                      active
-                        ? 'border-[#d15b62] bg-[#b83b44]/25 text-white'
-                        : 'border-[#c4454b]/22 bg-[#201518]/70 text-[#c7b3b6] hover:text-white'
-                    }`}
-                  >
-                    {method}
-                  </button>
-                );
-              })}
+            <div className="flex items-start gap-2 rounded-[10px] border border-[#c4454b]/30 bg-[#c4454b]/12 p-3 text-[12px] text-[#f3a6aa]">
+              <Lock className="h-4 w-4 text-[#f09599] shrink-0 mt-0.5" />
+              <span>
+                {lang === 'ar'
+                  ? 'بيانات وسيلة الدفع ورقم المحفظة للعرض والنسخ فقط — التعديل أو التغيير يتم من لوحة تحكم الإدارة.'
+                  : 'Payment method details are read-only. Updates are made exclusively by Admin from the Dashboard.'}
+              </span>
             </div>
-          </Field>
 
-          <Field label={t(lang, 'ownerName')}>
-            <input
-              type="text"
-              value={ownerName}
-              onChange={(e) => setOwnerName(e.target.value)}
-              placeholder={lang === 'ar' ? 'الاسم الكامل لصاحب الحساب' : 'Account holder full name'}
-              className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
-            />
-          </Field>
+            <div className="rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 p-4 space-y-3 text-[13px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[#a38f92]">{lang === 'ar' ? 'وسيلة الدفع' : 'Payment Method'}</span>
+                <span className="font-semibold text-white">{selected.bankName}</span>
+              </div>
 
-          <Field
-            label={
-              bankName === 'باينانس'
-                ? lang === 'ar'
-                  ? 'معرف باينانس / Binance Pay ID أو العنوان'
-                  : 'Binance Pay ID / Address'
-                : t(lang, 'accountNumber')
-            }
-          >
-            <input
-              type="text"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-              placeholder={bankName === 'باينانس' ? 'Binance Pay ID / TRC20' : '010XXXXXXXX'}
-              className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
-            />
-          </Field>
+              <div className="flex items-center justify-between">
+                <span className="text-[#a38f92]">{t(lang, 'ownerName')}</span>
+                <span className="text-white">{selected.ownerName}</span>
+              </div>
 
-          <div className="grid grid-cols-3 gap-2.5">
-            <Field label={t(lang, 'minOrder')}>
-              <input
-                type="number"
-                value={minOrder}
-                onChange={(e) => setMinOrder(e.target.value)}
-                className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 px-2.5 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
-              />
-            </Field>
-            <Field label={t(lang, 'maxOrder')}>
-              <input
-                type="number"
-                value={maxOrder}
-                onChange={(e) => setMaxOrder(e.target.value)}
-                className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 px-2.5 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
-              />
-            </Field>
-            <Field label={t(lang, 'dailyLimit')}>
-              <input
-                type="number"
-                value={dailyLimit}
-                onChange={(e) => setDailyLimit(e.target.value)}
-                className="w-full rounded-[10px] border border-[#c4454b]/25 bg-[#120c0e]/85 px-2.5 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
-              />
-            </Field>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[#a38f92]">
+                  {selected.bankName === 'باينانس'
+                    ? lang === 'ar'
+                      ? 'معرف باينانس'
+                      : 'Binance Pay ID'
+                    : t(lang, 'accountNumber')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copyNum(selected.accountNumber)}
+                  className="flex items-center gap-1.5 rounded-lg border border-[#c4454b]/28 bg-[#280e14]/80 px-2.5 py-1 text-[12.5px] font-mono-num font-bold text-white hover:bg-[#311118] cursor-pointer"
+                >
+                  <span>{selected.accountNumber}</span>
+                  <Copy className="h-3 w-3 text-[#c7b3b6]" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5 rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 p-3.5 text-[12px]">
+              <div>
+                <div className="text-[#a38f92]">{t(lang, 'minOrder')}</div>
+                <div className="font-mono-num font-semibold text-white mt-0.5">
+                  {formatMoney(selected.minOrder)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[#a38f92]">{t(lang, 'maxOrder')}</div>
+                <div className="font-mono-num font-semibold text-white mt-0.5">
+                  {formatMoney(selected.maxOrder)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[#a38f92]">{t(lang, 'dailyLimit')}</div>
+                <div className="font-mono-num font-semibold text-white mt-0.5">
+                  {formatMoney(selected.dailyLimit)}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </DetailDrawer>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-[12px] font-medium text-[#c7b3b6] block">{label}</label>
-      {children}
     </div>
   );
 }

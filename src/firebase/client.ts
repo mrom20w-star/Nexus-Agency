@@ -317,7 +317,27 @@ export async function fetchAgentSliceFromFirestore(
     .map((d) => ({ ...(d.data() as SmsMessage), id: d.id }))
     .sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt));
 
-  const requisites = reqSnap.docs.map((d) => ({ ...(d.data() as Requisite), id: d.id }));
+  let requisites = reqSnap.docs.map((d) => ({ ...(d.data() as Requisite), id: d.id }));
+  if (requisites.length === 0 && user.fixedDepositNumber?.trim()) {
+    const methodName = user.fixedDepositMethod?.trim() || 'فودافون كاش';
+    requisites = [
+      {
+        id: `req_${user.id}`,
+        userId: user.id,
+        accountId: account.account_id,
+        bankName: methodName,
+        ownerName: user.displayName,
+        accountNumber: user.fixedDepositNumber.trim(),
+        type: methodName === 'باينانس' ? 'instapay' : 'wallet',
+        minOrder: 100,
+        maxOrder: 30000,
+        dailyLimit: 150000,
+        dailyUsed: 0,
+        bidRate: Number(user.depositFeePct ?? 3.0),
+        active: true,
+      },
+    ];
+  }
   const disputes = dspSnap.docs
     .map((d) => ({ ...(d.data() as DisputeItem), id: d.id }))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -522,15 +542,22 @@ export async function createFirestoreAgentDeposit(
     'أورنج كاش': cfg.depositMethodNumbers?.orange,
     'باينانس': cfg.depositMethodNumbers?.binance,
   };
+  const fixedAgentNumber = (user.fixedDepositNumber || '').trim();
+  const fixedAgentMethod = (user.fixedDepositMethod || '').trim();
+  const resolvedMethod =
+    fixedAgentNumber && fixedAgentMethod && ALLOWED_METHOD_SET.has(fixedAgentMethod)
+      ? fixedAgentMethod
+      : paymentMethod;
+
   const assignedDepositNumber =
-    (user.fixedDepositNumber || '').trim() ||
-    (methodMap[paymentMethod] || '').trim() ||
+    fixedAgentNumber ||
+    (methodMap[resolvedMethod] || '').trim() ||
     (cfg.defaultDepositNumber || '').trim();
 
   if (!assignedDepositNumber) {
     return {
       ok: false,
-      error: 'لم يتم تعيين رقم إيداع ثابت من الإدارة بعد — برجاء التواصل مع الإدارة',
+      error: 'لم يتم إضافة رقم وكيل ثابت من لوحة الإدارة بعد — برجاء التواصل مع الإدارة',
     };
   }
 
@@ -549,7 +576,7 @@ export async function createFirestoreAgentDeposit(
     incomeUsdt: Math.round(amountLocal * ((user.depositFeePct ?? 3) / 100) * 100) / 100,
     rate,
     requisiteId: 'fixed_deposit',
-    bankName: paymentMethod,
+    bankName: resolvedMethod,
     ownerName: user.displayName,
     requisiteNumber: assignedDepositNumber,
     status: 'pending',
@@ -839,71 +866,34 @@ export async function actFirestoreWithdrawal(
 }
 
 export async function createFirestoreRequisite(
-  userId: string,
-  data: Record<string, unknown>
+  _userId: string,
+  _data: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
-  const bankName = String(data.bankName || '').trim();
-  if (!ALLOWED_METHOD_SET.has(bankName)) {
-    return {
-      ok: false,
-      error: 'اختر وسيلة دفع واحدة من: فودافون كاش، اتصالات كاش، أورنج كاش، باينانس',
-    };
-  }
-  const existing = await getDocs(
-    query(collection(firestoreDb, 'requisites'), where('userId', '==', userId))
-  );
-  if (!existing.empty) {
-    return {
-      ok: false,
-      error: 'يُسمح بوسيلة دفع واحدة فقط لكل حساب — يمكنك تعديلها أو حذفها أولاً',
-    };
-  }
-  const id = `req_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
-  const reqDoc: Requisite = {
-    id,
-    userId,
-    accountId: `acc_${userId}`,
-    bankName,
-    ownerName: String(data.ownerName || '').trim(),
-    accountNumber: String(data.accountNumber || '').trim(),
-    type: bankName === 'باينانس' ? 'instapay' : 'wallet',
-    minOrder: Math.max(1, Number(data.minOrder) || 100),
-    maxOrder: Math.max(100, Number(data.maxOrder) || 30000),
-    dailyLimit: Math.max(100, Number(data.dailyLimit) || 100000),
-    dailyUsed: 0,
-    bidRate: Number(data.bidRate) || 3.0,
-    active: data.active !== false,
+  return {
+    ok: false,
+    error: 'إضافة وتعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
   };
-  await setDoc(doc(firestoreDb, 'requisites', id), reqDoc);
-  return { ok: true };
 }
 
 export async function updateFirestoreRequisite(
-  userId: string,
-  id: string,
-  data: Record<string, unknown>
+  _userId: string,
+  _id: string,
+  _data: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
-  const reqRef = doc(firestoreDb, 'requisites', id);
-  const snap = await getDoc(reqRef);
-  if (!snap.exists() || snap.data().userId !== userId) {
-    return { ok: false, error: 'وسيلة الدفع غير موجودة' };
-  }
-  if (typeof data.bankName === 'string' && !ALLOWED_METHOD_SET.has(data.bankName.trim())) {
-    return {
-      ok: false,
-      error: 'اختر وسيلة دفع واحدة صالحة',
-    };
-  }
-  await updateDoc(reqRef, data);
-  return { ok: true };
+  return {
+    ok: false,
+    error: 'إضافة وتعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
+  };
 }
 
-export async function deleteFirestoreRequisite(userId: string, id: string): Promise<void> {
-  const reqRef = doc(firestoreDb, 'requisites', id);
-  const snap = await getDoc(reqRef);
-  if (snap.exists() && snap.data().userId === userId) {
-    await deleteDoc(reqRef);
-  }
+export async function deleteFirestoreRequisite(
+  _userId: string,
+  _id: string
+): Promise<{ ok: boolean; error?: string }> {
+  return {
+    ok: false,
+    error: 'حذف أو تعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
+  };
 }
 
 export async function simulateFirestoreSms(userId: string): Promise<void> {

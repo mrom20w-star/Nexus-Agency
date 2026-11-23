@@ -17,7 +17,6 @@ import {
   Lock,
   LogOut,
   MailPlus,
-  PhoneCall,
   Plus,
   RefreshCw,
   Search,
@@ -68,6 +67,8 @@ export interface AdminDashboardPageProps {
     username: string;
     balanceEgp?: number;
     active?: boolean;
+    fixedDepositNumber?: string;
+    fixedDepositMethod?: string;
   }) => Promise<{ ok: boolean; error?: string; user?: ManagedUser }>;
   onUpdateUser: (
     userId: string,
@@ -112,6 +113,8 @@ export interface AdminDashboardPageProps {
     identifier?: string;
     amountEgp: number;
     bankName?: string;
+    depositNumber?: string;
+    saveAsFixed?: boolean;
     note?: string;
     autoCredit?: boolean;
   }) => Promise<{ ok: boolean; error?: string; user?: ManagedUser }>;
@@ -173,12 +176,15 @@ export function AdminDashboardPage({
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newUsername, setNewUsername] = useState('');
+  const [newFixedDepMethod, setNewFixedDepMethod] = useState('فودافون كاش');
+  const [newFixedDepNumber, setNewFixedDepNumber] = useState('');
   const [newUserActive, setNewUserActive] = useState(true);
   const [creatingUser, setCreatingUser] = useState(false);
   const [createUserFeedback, setCreateUserFeedback] = useState<{
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const fixedDepSectionRef = useRef<HTMLInputElement | null>(null);
 
   // Fixed deposit number assignment form
   const [fixedDepIdentifier, setFixedDepIdentifier] = useState('');
@@ -216,6 +222,8 @@ export function AdminDashboardPage({
   const [instantDepIdentifier, setInstantDepIdentifier] = useState('');
   const [instantDepAmount, setInstantDepAmount] = useState('1000');
   const [instantDepMethod, setInstantDepMethod] = useState('فودافون كاش');
+  const [instantDepNumber, setInstantDepNumber] = useState('');
+  const [instantSaveFixedDep, setInstantSaveFixedDep] = useState(true);
   const [instantDepNote, setInstantDepNote] = useState('');
   const [sendingDep, setSendingDep] = useState(false);
   const [instantDepFeedback, setInstantDepFeedback] = useState<{
@@ -235,6 +243,8 @@ export function AdminDashboardPage({
   const [depIdentifier, setDepIdentifier] = useState('');
   const [depAmount, setDepAmount] = useState('1000');
   const [depMethod, setDepMethod] = useState('فودافون كاش');
+  const [depNumber, setDepNumber] = useState('');
+  const [depSaveFixed, setDepSaveFixed] = useState(true);
   const [depNote, setDepNote] = useState('');
   const [sendingOrderDep, setSendingOrderDep] = useState(false);
   const [orderDepFeedback, setOrderDepFeedback] = useState<{
@@ -373,7 +383,7 @@ export function AdminDashboardPage({
               </span>
               <span>{needsSetup ? 'تفعيل كلمة مرور الإدارة لأول مرة' : 'لوحة تحكم الإدارة'}</span>
             </h1>
-            <p className="text-[13px] text-[#cbb6b9] max-w-md">
+            <p className="text-[13px] text-[#c7b3b6] max-w-md">
               {needsSetup
                 ? 'عيّن كلمة مرور خاصة بك لحماية لوحة التحكم، إدارة اللاعبين، الإيداعات، السحب، وسعر الصرف لايف.'
                 : 'ربط مباشر بقاعدة بيانات المنصة لإدارة اللاعبين، الأرصدة، السحب، الإيداعات، وأرقام الإيداع الثابتة.'}
@@ -435,36 +445,36 @@ export function AdminDashboardPage({
             className="space-y-4"
           >
             <div className="space-y-1.5">
-              <label className="text-[12px] font-medium text-[#e0cfd2] block">
+              <label className="text-[12px] font-medium text-[#e2d4d6] block">
                 {needsSetup ? 'كلمة مرور الإدارة الجديدة' : 'كلمة مرور الأدمن'}
               </label>
               <div className="relative">
-                <Lock className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-[#a89497]" />
+                <Lock className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-[#a38f92]" />
                 <input
                   type="password"
                   required
                   value={adminPassInput}
                   onChange={(e) => setAdminPassInput(e.target.value)}
                   placeholder="أدخل كلمة مرور الإدارة"
-                  className="w-full rounded-[11px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md ps-10 pe-3 py-2.5 text-[14px] text-white outline-none focus:border-[#d9535b] transition-colors"
+                  className="w-full rounded-[11px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md ps-10 pe-3 py-2.5 text-[14px] text-white outline-none focus:border-[#d15b62] transition-colors"
                 />
               </div>
             </div>
 
             {needsSetup && (
               <div className="space-y-1.5">
-                <label className="text-[12px] font-medium text-[#e0cfd2] block">
+                <label className="text-[12px] font-medium text-[#e2d4d6] block">
                   تأكيد كلمة المرور
                 </label>
                 <div className="relative">
-                  <KeyRound className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-[#a89497]" />
+                  <KeyRound className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-[#a38f92]" />
                   <input
                     type="password"
                     required
                     value={adminPassConfirm}
                     onChange={(e) => setAdminPassConfirm(e.target.value)}
                     placeholder="أعد كتابة كلمة المرور"
-                    className="w-full rounded-[11px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md ps-10 pe-3 py-2.5 text-[14px] text-white outline-none focus:border-[#d9535b] transition-colors"
+                    className="w-full rounded-[11px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md ps-10 pe-3 py-2.5 text-[14px] text-white outline-none focus:border-[#d15b62] transition-colors"
                   />
                 </div>
               </div>
@@ -484,7 +494,7 @@ export function AdminDashboardPage({
           </form>
 
           <div className="pt-3 border-t border-[#c4454b]/20 flex items-center justify-between gap-2 text-[11.5px]">
-            <span className="text-[#cbb6b9] flex items-center gap-1.5">
+            <span className="text-[#c7b3b6] flex items-center gap-1.5">
               <Database className="h-3.5 w-3.5 text-[#f09599]" />
               <span>حالة سيرفر Firebase ({firebaseProjectId})</span>
             </span>
@@ -576,7 +586,7 @@ export function AdminDashboardPage({
       className="min-h-dvh bg-[#0f0b0c] bg-[radial-gradient(ellipse_at_top,_rgba(196,69,75,0.24),transparent_62%),radial-gradient(ellipse_at_bottom_left,_rgba(184,59,68,0.12),transparent_55%)] text-white flex flex-col"
     >
       {/* Top Command Bar */}
-      <header className="sticky top-0 z-30 border-b border-[#c4454b]/25 bg-[#180e11]/72 backdrop-blur-xl px-4 lg:px-6 h-16 shrink-0 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-30 border-b border-[#c4454b]/25 bg-[#160d10]/72 backdrop-blur-xl px-4 lg:px-6 h-16 shrink-0 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <HostapayLogo
             platformName={state.config.platformName}
@@ -628,7 +638,7 @@ export function AdminDashboardPage({
             type="button"
             onClick={() => onRefreshAdmin()}
             title="تحديث فوري"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#c4454b]/25 bg-[#241317]/70 text-[#d4c2c5] hover:text-white cursor-pointer shrink-0"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#c4454b]/25 bg-[#241317]/70 text-[#c7b3b6] hover:text-white cursor-pointer shrink-0"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -659,7 +669,7 @@ export function AdminDashboardPage({
                   className={`flex items-center justify-between gap-2 rounded-[11px] px-3 py-2.5 text-start transition-all cursor-pointer ${
                     active
                       ? 'bg-[#b83b44]/85 border border-[#f29b9f]/25 text-white shadow-[0_8px_24px_rgba(184,59,68,0.32)] backdrop-blur-md'
-                      : 'border border-transparent text-[#d4c2c5] hover:bg-[#241317]/65 hover:text-white'
+                      : 'border border-transparent text-[#c7b3b6] hover:bg-[#241317]/65 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -668,7 +678,7 @@ export function AdminDashboardPage({
                       <div className="text-[13px] font-bold truncate">{item.label}</div>
                       <div
                         className={`hidden lg:block text-[10.5px] truncate ${
-                          active ? 'text-white/80' : 'text-[#9e898c]'
+                          active ? 'text-white/80' : 'text-[#a38f92]'
                         }`}
                       >
                         {item.sub}
@@ -680,7 +690,7 @@ export function AdminDashboardPage({
                       className={`rounded-md px-1.5 py-0.5 text-[11px] font-mono-num font-bold shrink-0 ${
                         active
                           ? 'bg-black/25 text-white'
-                          : item.badgeColor || 'bg-[#2a171b]/85 text-[#eadcdf]'
+                          : item.badgeColor || 'bg-[#280e14]/85 text-[#e2d4d6]'
                       }`}
                     >
                       {item.badge}
@@ -693,7 +703,7 @@ export function AdminDashboardPage({
 
           <div className="hidden lg:block rounded-[16px] border border-[#c4454b]/25 bg-[#1a1013]/68 backdrop-blur-xl shadow-[0_12px_36px_rgba(0,0,0,0.42)] p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11.5px] font-semibold text-[#b8a5a8]">اسم المنصة (مثبّت)</span>
+              <span className="text-[11.5px] font-semibold text-[#c7b3b6]">اسم المنصة (مثبّت)</span>
               <CountryFlagBadge code={state.config.countryCode} />
             </div>
             <div className="text-[15px] font-bold text-white truncate flex items-center gap-1.5">
@@ -701,7 +711,7 @@ export function AdminDashboardPage({
               <span>{state.config.platformName}</span>
             </div>
             <div className="pt-2 border-t border-[#c4454b]/20 flex items-center justify-between text-[12px]">
-              <span className="text-[#b8a5a8]">سعر الصرف</span>
+              <span className="text-[#c7b3b6]">سعر الصرف</span>
               <span className="font-mono-num font-bold text-[#f09599]">
                 1 USD = {state.config.usdRate} ج.م
               </span>
@@ -709,7 +719,7 @@ export function AdminDashboardPage({
             <button
               type="button"
               onClick={() => setTab('settings')}
-              className="w-full rounded-[9px] border border-[#c4454b]/25 bg-[#241317]/65 py-1.5 text-[12px] font-semibold text-[#e6d5d8] hover:text-white hover:border-[#c4454b]/50 cursor-pointer whitespace-nowrap"
+              className="w-full rounded-[9px] border border-[#c4454b]/25 bg-[#241317]/65 py-1.5 text-[12px] font-semibold text-[#e2d4d6] hover:text-white hover:border-[#c4454b]/50 cursor-pointer whitespace-nowrap"
             >
               إعدادات سعر الصرف والأمان
             </button>
@@ -761,11 +771,11 @@ export function AdminDashboardPage({
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
             <div className="rounded-[15px] border border-[#c4454b]/25 bg-gradient-to-b from-[#241317]/75 to-[#160d10]/65 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.32)] p-4 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[11.5px] text-[#cbb6b9]">المستخدمين أونلاين حاليًا</div>
+                <div className="text-[11.5px] text-[#c7b3b6]">المستخدمين أونلاين حاليًا</div>
                 <div className="mt-1 text-[26px] font-bold font-mono-num text-[#00e344]">
                   {onlineCount}
                 </div>
-                <div className="text-[10.5px] text-[#9e898c]">مراقبة فورية لايف</div>
+                <div className="text-[10.5px] text-[#a38f92]">مراقبة فورية لايف</div>
               </div>
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#00e344]/12 border border-[#00e344]/25 text-[#00e344]">
                 <Activity className="h-5 w-5" />
@@ -774,11 +784,11 @@ export function AdminDashboardPage({
 
             <div className="rounded-[15px] border border-[#c4454b]/25 bg-gradient-to-b from-[#241317]/75 to-[#160d10]/65 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.32)] p-4 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[11.5px] text-[#cbb6b9]">إجمالي اللاعبين</div>
+                <div className="text-[11.5px] text-[#c7b3b6]">إجمالي اللاعبين</div>
                 <div className="mt-1 text-[26px] font-bold font-mono-num text-white">
                   {users.length}
                 </div>
-                <div className="text-[10.5px] text-[#9e898c]">
+                <div className="text-[10.5px] text-[#a38f92]">
                   مفعّل: {users.filter((u) => u.active).length}
                 </div>
               </div>
@@ -789,11 +799,11 @@ export function AdminDashboardPage({
 
             <div className="rounded-[15px] border border-[#c4454b]/25 bg-gradient-to-b from-[#241317]/75 to-[#160d10]/65 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.32)] p-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-[11.5px] text-[#cbb6b9]">مجموع أرصدة الموقع</div>
+                <div className="text-[11.5px] text-[#c7b3b6]">مجموع أرصدة الموقع</div>
                 <div className="mt-1 text-[20px] sm:text-[22px] font-bold font-mono-num text-[#f09599] truncate">
                   {formatMoney(totalBalanceEgp)} ج.م
                 </div>
-                <div className="text-[10.5px] text-[#9e898c]">بالجنيه المصري</div>
+                <div className="text-[10.5px] text-[#a38f92]">بالجنيه المصري</div>
               </div>
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#c4454b]/18 border border-[#c4454b]/30 text-[#f09599]">
                 <Coins className="h-5 w-5" />
@@ -802,11 +812,11 @@ export function AdminDashboardPage({
 
             <div className="rounded-[15px] border border-[#c4454b]/25 bg-gradient-to-b from-[#241317]/75 to-[#160d10]/65 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.32)] p-4 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[11.5px] text-[#cbb6b9]">طلبات بانتظار القرار</div>
+                <div className="text-[11.5px] text-[#c7b3b6]">طلبات بانتظار القرار</div>
                 <div className="mt-1 text-[26px] font-bold font-mono-num text-[#f09599]">
                   {totalPendingRequests + pendingAdminMsgWithdrawals}
                 </div>
-                <div className="text-[10.5px] text-[#9e898c]">
+                <div className="text-[10.5px] text-[#a38f92]">
                   {pendingDeposits.length} إيداع · {pendingAgentWithdrawals.length} سحب
                 </div>
               </div>
@@ -829,7 +839,7 @@ export function AdminDashboardPage({
                     <span>إنشاء حساب لاعب جديد</span>
                   </div>
 
-                  <div className="rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md p-3 text-[12px] text-[#cbb6b9] flex items-start gap-2">
+                  <div className="rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md p-3 text-[12px] text-[#c7b3b6] flex items-start gap-2">
                     <Sparkles className="h-4 w-4 text-[#f09599] shrink-0 mt-0.5" />
                     <span>
                       يتم توليد <strong className="text-white">ID لاعب عشوائي مميز</strong> تلقائيًا مثل{' '}
@@ -854,6 +864,12 @@ export function AdminDashboardPage({
                           username: newUsername.trim() || `${prefix}_egp`,
                           balanceEgp: 0,
                           active: newUserActive,
+                          ...(newFixedDepNumber.trim()
+                            ? {
+                                fixedDepositNumber: newFixedDepNumber.trim(),
+                                fixedDepositMethod: newFixedDepMethod,
+                              }
+                            : {}),
                         });
                         if (res.ok) {
                           const pidText = res.user?.playerId ? ` · ${res.user.playerId}` : '';
@@ -884,6 +900,8 @@ export function AdminDashboardPage({
                           setNewPassword('');
                           setNewDisplayName('');
                           setNewUsername('');
+                          setNewFixedDepNumber('');
+                          setNewFixedDepMethod('فودافون كاش');
                           setNewUserActive(true);
                         } else {
                           setCreateUserFeedback({
@@ -911,7 +929,7 @@ export function AdminDashboardPage({
                     )}
 
                     <div className="space-y-1">
-                      <label className="text-[12px] text-[#e0cfd2]">البريد الإلكتروني *</label>
+                      <label className="text-[12px] text-[#e2d4d6]">البريد الإلكتروني *</label>
                       <input
                         ref={emailInputRef}
                         type="email"
@@ -919,13 +937,13 @@ export function AdminDashboardPage({
                         placeholder="player@domain.com"
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
 
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <label className="text-[12px] text-[#e0cfd2]">كلمة المرور *</label>
+                        <label className="text-[12px] text-[#e2d4d6]">كلمة المرور *</label>
                         <button
                           type="button"
                           onClick={() => setNewPassword(generateStrongPin())}
@@ -941,31 +959,67 @@ export function AdminDashboardPage({
                         placeholder="كلمة مرور الدخول"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
-                        <label className="text-[12px] text-[#e0cfd2]">اسم اللاعب</label>
+                        <label className="text-[12px] text-[#e2d4d6]">اسم اللاعب</label>
                         <input
                           type="text"
                           placeholder="أحمد محمد"
                           value={newDisplayName}
                           onChange={(e) => setNewDisplayName(e.target.value)}
-                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[12px] text-[#e0cfd2]">اليوزرنيم</label>
+                        <label className="text-[12px] text-[#e2d4d6]">اليوزرنيم</label>
                         <input
                           type="text"
                           placeholder="ahmed_egp"
                           value={newUsername}
                           onChange={(e) => setNewUsername(e.target.value)}
-                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                         />
                       </div>
+                    </div>
+
+                    <div className="rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[12px] font-semibold text-white">
+                          إضافة رقم وكيل ثابت (اختياري أثناء الإنشاء)
+                        </label>
+                        <span className="text-[10.5px] text-[#f09599]">ثابت في الإيداع من الإدارة فقط</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {PAYMENT_METHOD_CHIPS.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setNewFixedDepMethod(m)}
+                            className={`rounded-md border px-2.5 py-1 text-[11px] cursor-pointer whitespace-nowrap ${
+                              newFixedDepMethod === m
+                                ? 'border-[#d15b62] bg-[#c4454b]/28 text-white font-semibold'
+                                : 'border-[#c4454b]/22 bg-[#1a1013]/85 text-[#c7b3b6]'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="text"
+                        value={newFixedDepNumber}
+                        onChange={(e) => setNewFixedDepNumber(e.target.value)}
+                        placeholder={
+                          newFixedDepMethod === 'باينانس'
+                            ? 'رقم أو عنوان باينانس للوكيل (مثال: BINANCE-PAY-ID)'
+                            : 'رقم المحفظة للوكيل (مثال: 010xxxxxxxx)'
+                        }
+                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[13px] font-mono-num font-semibold text-[#f09599] outline-none focus:border-[#d15b62]"
+                      />
                     </div>
 
                     <div
@@ -976,7 +1030,7 @@ export function AdminDashboardPage({
                         <div className="text-[12.5px] font-semibold text-white">
                           تفعيل الحساب للدخول فورًا
                         </div>
-                        <div className="text-[11px] text-[#a89497]">
+                        <div className="text-[11px] text-[#a38f92]">
                           {newUserActive
                             ? 'يقدر أي مستخدم معه البريد والباسورد فتح الحساب مباشرة'
                             : 'الحساب مقفول ولن يفتح حتى يتم تفعيله من الجدول'}
@@ -992,7 +1046,7 @@ export function AdminDashboardPage({
                           setNewUserActive((v) => !v);
                         }}
                         className={`relative h-5 w-10 shrink-0 rounded-full transition-colors cursor-pointer ${
-                          newUserActive ? 'bg-[#00e344]' : 'bg-[#3d252a]'
+                          newUserActive ? 'bg-[#00e344]' : 'bg-[#311118]'
                         }`}
                       >
                         <span
@@ -1003,7 +1057,7 @@ export function AdminDashboardPage({
                       </button>
                     </div>
 
-                    <div className="rounded-[9px] border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[11.5px] text-[#cbb6b9]">
+                    <div className="rounded-[9px] border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[11.5px] text-[#c7b3b6]">
                       يبدأ الحساب برصيد <strong className="font-mono-num text-white">0.00 ج.م</strong>، ويمكنك شحنه من خانة الإيداع الفوري.
                     </div>
 
@@ -1018,14 +1072,22 @@ export function AdminDashboardPage({
                   </form>
                 </div>
 
-                {/* Assign Fixed Deposit Number Card (by Email or Player ID) */}
+                {/* Assign Fixed Agent Number Card (by Email or Player ID) */}
                 <div className="rounded-[16px] border border-[#c4454b]/25 bg-[#1a1013]/68 backdrop-blur-xl shadow-[0_12px_36px_rgba(0,0,0,0.42)] p-5 space-y-3.5">
-                  <div className="flex items-center gap-2 text-[15px] font-bold text-white">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#c4454b]/20 text-[#f09599]">
-                      <PhoneCall className="h-4 w-4" />
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-[15px] font-bold text-white">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#c4454b]/20 text-[#f09599]">
+                        <Lock className="h-4 w-4" />
+                      </span>
+                      <span>إضافة رقم وكيل ثابت</span>
+                    </div>
+                    <span className="rounded-md border border-[#c4454b]/30 bg-[#c4454b]/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#f3a6aa] whitespace-nowrap">
+                      بالجيميل أو ID
                     </span>
-                    <span>تعيين رقم إيداع ثابت (بالجيميل أو ID)</span>
                   </div>
+                  <p className="text-[11.5px] text-[#c7b3b6] leading-relaxed">
+                    الإدارة فقط تضيف أو تغيّر رقم الوكيل الثابت، ويبقى ثابتاً في صفحة الإيداع عند الوكيل ولا يمكنه تغييره أبداً.
+                  </p>
 
                   <form
                     onSubmit={async (e) => {
@@ -1033,7 +1095,7 @@ export function AdminDashboardPage({
                       setFixedDepFeedback(null);
                       const num = fixedDepNumberInput.trim();
                       if (!num) {
-                        setFixedDepFeedback({ type: 'error', text: 'اكتب رقم الإيداع الثابت' });
+                        setFixedDepFeedback({ type: 'error', text: 'اكتب رقم الوكيل الثابت' });
                         return;
                       }
                       if (!matchedFixedDepUser && !fixedDepIdentifier.trim()) {
@@ -1055,13 +1117,13 @@ export function AdminDashboardPage({
                           if (res.ok) {
                             setFixedDepFeedback({
                               type: 'success',
-                              text: `تم ربط رقم الإيداع (${num}) بالحساب ${res.user?.email || matchedFixedDepUser?.email || ''}`,
+                              text: `تم تثبيت رقم الوكيل (${fixedDepMethodInput} · ${num}) للحساب ${res.user?.email || matchedFixedDepUser?.email || ''}`,
                             });
-                            onNotify('success', 'تم تعيين رقم الإيداع الثابت', num);
+                            onNotify('success', 'تم حفظ رقم الوكيل الثابت', `${fixedDepMethodInput} · ${num}`);
                           } else {
                             setFixedDepFeedback({
                               type: 'error',
-                              text: res.error || 'تعذر حفظ رقم الإيداع',
+                              text: res.error || 'تعذر حفظ رقم الوكيل الثابت',
                             });
                           }
                         } else if (matchedFixedDepUser) {
@@ -1072,13 +1134,13 @@ export function AdminDashboardPage({
                           if (res.ok) {
                             setFixedDepFeedback({
                               type: 'success',
-                              text: `تم ربط رقم الإيداع (${num}) بالحساب بنجاح`,
+                              text: `تم تثبيت رقم الوكيل (${fixedDepMethodInput} · ${num}) للحساب بنجاح`,
                             });
-                            onNotify('success', 'تم تعيين رقم الإيداع الثابت', num);
+                            onNotify('success', 'تم حفظ رقم الوكيل الثابت', `${fixedDepMethodInput} · ${num}`);
                           } else {
                             setFixedDepFeedback({
                               type: 'error',
-                              text: res.error || 'تعذر حفظ رقم الإيداع',
+                              text: res.error || 'تعذر حفظ رقم الوكيل الثابت',
                             });
                           }
                         }
@@ -1108,10 +1170,13 @@ export function AdminDashboardPage({
                         if (found?.fixedDepositNumber) {
                           setFixedDepNumberInput(found.fixedDepositNumber);
                         }
+                        if (found?.fixedDepositMethod) {
+                          setFixedDepMethodInput(found.fixedDepositMethod);
+                        }
                       }}
-                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                     >
-                      <option value="">— اختر حساباً أو اكتب الجيميل / ID —</option>
+                      <option value="">— اختر حساباً بالجيميل أو اكتب الإيميل / ID —</option>
                       {users.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.email} [{u.playerId}]
@@ -1120,11 +1185,12 @@ export function AdminDashboardPage({
                     </select>
 
                     <input
+                      ref={fixedDepSectionRef}
                       type="text"
                       value={fixedDepIdentifier}
                       onChange={(e) => setFixedDepIdentifier(e.target.value)}
-                      placeholder="الجيميل أو PL-xxxxxxxx"
-                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                      placeholder="الجيميل (Gmail) أو PL-xxxxxxxx"
+                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                     />
 
                     <div className="flex flex-wrap gap-1.5">
@@ -1135,8 +1201,8 @@ export function AdminDashboardPage({
                           onClick={() => setFixedDepMethodInput(m)}
                           className={`rounded-md border px-2.5 py-1 text-[11px] cursor-pointer whitespace-nowrap ${
                             fixedDepMethodInput === m
-                              ? 'border-[#d9535b] bg-[#c4454b]/28 text-white font-semibold'
-                              : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#cbb6b9]'
+                              ? 'border-[#d15b62] bg-[#c4454b]/28 text-white font-semibold'
+                              : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#c7b3b6]'
                           }`}
                         >
                           {m}
@@ -1149,8 +1215,8 @@ export function AdminDashboardPage({
                       required
                       value={fixedDepNumberInput}
                       onChange={(e) => setFixedDepNumberInput(e.target.value)}
-                      placeholder="رقم الإيداع الثابت (مثل 010xxxxxxxx أو عنوان باينانس)"
-                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13.5px] font-mono-num font-bold text-[#f09599] outline-none focus:border-[#d9535b]"
+                      placeholder="رقم الوكيل الثابت للإيداع (010xxxxxxxx أو عنوان باينانس)"
+                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13.5px] font-mono-num font-bold text-[#f09599] outline-none focus:border-[#d15b62]"
                     />
 
                     <button
@@ -1158,7 +1224,7 @@ export function AdminDashboardPage({
                       disabled={savingFixedDep}
                       className="w-full rounded-[10px] border border-[#f29b9f]/25 bg-[#b83b44]/85 py-2.5 text-[13px] font-semibold text-white hover:bg-[#c94a53]/90 disabled:opacity-60 cursor-pointer whitespace-nowrap"
                     >
-                      {savingFixedDep ? 'جاري التعيين...' : 'حفظ رقم الإيداع الثابت للحساب'}
+                      {savingFixedDep ? 'جاري التثبيت...' : 'حفظ رقم الوكيل الثابت'}
                     </button>
                   </form>
                 </div>
@@ -1171,21 +1237,21 @@ export function AdminDashboardPage({
                     دليل اللاعبين والحسابات ({filteredUsers.length})
                   </span>
                   <div className="relative w-full sm:w-64">
-                    <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a89497]" />
+                    <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
                     <input
                       type="text"
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
                       placeholder="ابحث بالاسم، البريد، أو ID اللاعب..."
-                      className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md ps-9 pe-3 py-1.5 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                      className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md ps-9 pe-3 py-1.5 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                     />
                   </div>
                 </div>
 
                 {filteredUsers.length === 0 ? (
-                  <div className="p-10 text-center space-y-2 text-[#a89497]">
-                    <Users className="h-9 w-9 mx-auto text-[#7b5d62]" />
-                    <div className="text-[14px] font-semibold text-[#d4c2c5]">
+                  <div className="p-10 text-center space-y-2 text-[#a38f92]">
+                    <Users className="h-9 w-9 mx-auto text-[#7a6468]" />
+                    <div className="text-[14px] font-semibold text-[#c7b3b6]">
                       {users.length === 0
                         ? 'مفيش حسابات لاعبين متسجلة لسه'
                         : 'مفيش نتائج مطابقة للبحث'}
@@ -1194,10 +1260,10 @@ export function AdminDashboardPage({
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-start text-[13px]">
-                      <thead className="bg-[#241317]/75 text-[11.5px] text-[#d4c2c5]">
+                      <thead className="bg-[#241317]/75 text-[11.5px] text-[#c7b3b6]">
                         <tr>
                           <th className="py-3 px-4 text-start">اللاعب &amp; ID</th>
-                          <th className="py-3 px-4 text-start">بيانات الدخول ورقم الإيداع</th>
+                          <th className="py-3 px-4 text-start">بيانات الدخول ووسيلة الدفع</th>
                           <th className="py-3 px-4 text-start">الرصيد (ج.م)</th>
                           <th className="py-3 px-4 text-start">التفعيل</th>
                           <th className="py-3 px-4 text-start">التحكم</th>
@@ -1208,7 +1274,7 @@ export function AdminDashboardPage({
                           const passVisible = Boolean(revealedPassIds[u.id]);
                           const rawPass = u.password || '';
                           return (
-                            <tr key={u.id} className="hover:bg-[#23171a]/65 transition-colors">
+                            <tr key={u.id} className="hover:bg-[#201518]/65 transition-colors">
                               <td className="py-3.5 px-4">
                                 <div className="flex items-start gap-2.5">
                                   <CountryFlagBadge code="EG" />
@@ -1230,7 +1296,7 @@ export function AdminDashboardPage({
                                           <Copy className="h-2.5 w-2.5 opacity-70" />
                                         )}
                                       </button>
-                                      <span className="text-[11px] font-mono-num text-[#968285]">
+                                      <span className="text-[11px] font-mono-num text-[#a38f92]">
                                         @{u.username}
                                       </span>
                                     </div>
@@ -1283,14 +1349,41 @@ export function AdminDashboardPage({
                                   )}
                                 </div>
                                 {u.fixedDepositNumber ? (
-                                  <div className="mt-1 inline-flex items-center gap-1 rounded bg-[#c4454b]/15 border border-[#c4454b]/30 px-1.5 py-0.5 text-[10.5px] text-[#f3a6aa]">
-                                    <span>رقم الإيداع:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFixedDepIdentifier(u.email);
+                                      setFixedDepNumberInput(u.fixedDepositNumber || '');
+                                      if (u.fixedDepositMethod) {
+                                        setFixedDepMethodInput(u.fixedDepositMethod);
+                                      }
+                                      setTimeout(() => {
+                                        fixedDepSectionRef.current?.focus();
+                                        fixedDepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      }, 40);
+                                    }}
+                                    title="تعديل رقم الوكيل الثابت من الإدارة"
+                                    className="mt-1 inline-flex items-center gap-1 rounded bg-[#c4454b]/15 border border-[#c4454b]/30 px-1.5 py-0.5 text-[10.5px] text-[#f3a6aa] hover:border-[#d15b62] cursor-pointer"
+                                  >
+                                    <Lock className="h-2.5 w-2.5 shrink-0" />
+                                    <span>رقم وكيل ثابت ({u.fixedDepositMethod || 'فودافون كاش'}):</span>
                                     <span className="font-bold text-white">{u.fixedDepositNumber}</span>
-                                  </div>
+                                  </button>
                                 ) : (
-                                  <div className="mt-1 text-[10.5px] text-[#968285]">
-                                    رقم الإيداع: الافتراضي للمنصة
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFixedDepIdentifier(u.email);
+                                      setFixedDepNumberInput('');
+                                      setTimeout(() => {
+                                        fixedDepSectionRef.current?.focus();
+                                        fixedDepSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      }, 40);
+                                    }}
+                                    className="mt-1 inline-flex items-center gap-1 rounded border border-[#c4454b]/30 bg-[#201518]/75 px-1.5 py-0.5 text-[10.5px] text-[#f09599] hover:border-[#d15b62] hover:text-white cursor-pointer"
+                                  >
+                                    <span>+ إضافة رقم وكيل ثابت</span>
+                                  </button>
                                 )}
                               </td>
 
@@ -1349,7 +1442,7 @@ export function AdminDashboardPage({
                                       setEditFixedDepMethod(u.fixedDepositMethod || 'فودافون كاش');
                                     }}
                                     title="تعديل"
-                                    className="rounded-lg border border-[#c4454b]/25 bg-[#23171a]/80 p-1.5 text-[#d4c2c5] hover:text-white cursor-pointer"
+                                    className="rounded-lg border border-[#c4454b]/25 bg-[#201518]/80 p-1.5 text-[#c7b3b6] hover:text-white cursor-pointer"
                                   >
                                     <Edit3 className="h-3.5 w-3.5" />
                                   </button>
@@ -1386,7 +1479,7 @@ export function AdminDashboardPage({
                                       <button
                                         type="button"
                                         onClick={() => setConfirmDeleteId(null)}
-                                        className="rounded-lg bg-[#2a1c1f] px-2 py-1 text-[11px] text-[#c7b3b6] cursor-pointer"
+                                        className="rounded-lg bg-[#280e14] px-2 py-1 text-[11px] text-[#c7b3b6] cursor-pointer"
                                       >
                                         لا
                                       </button>
@@ -1419,7 +1512,7 @@ export function AdminDashboardPage({
                       <button
                         type="button"
                         onClick={() => setEditingUser(null)}
-                        className="text-[12px] text-[#b8a5a8] hover:text-white cursor-pointer"
+                        className="text-[12px] text-[#c7b3b6] hover:text-white cursor-pointer"
                       >
                         إغلاق
                       </button>
@@ -1430,21 +1523,21 @@ export function AdminDashboardPage({
                         value={editDisplayName}
                         onChange={(e) => setEditDisplayName(e.target.value)}
                         placeholder="الاسم"
-                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                       />
                       <input
                         type="email"
                         value={editEmail}
                         onChange={(e) => setEditEmail(e.target.value)}
                         placeholder="البريد"
-                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                       />
                       <input
                         type="text"
                         value={editPassword}
                         onChange={(e) => setEditPassword(e.target.value)}
                         placeholder="كلمة مرور جديدة (اختياري)"
-                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                       />
                       <input
                         type="number"
@@ -1452,19 +1545,19 @@ export function AdminDashboardPage({
                         value={editBalance}
                         onChange={(e) => setEditBalance(e.target.value)}
                         placeholder="الرصيد (ج.م)"
-                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] font-mono-num font-bold text-[#00e344] outline-none focus:border-[#d9535b]"
+                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] font-mono-num font-bold text-[#00e344] outline-none focus:border-[#d15b62]"
                       />
                       <input
                         type="text"
                         value={editFixedDepNum}
                         onChange={(e) => setEditFixedDepNum(e.target.value)}
-                        placeholder="رقم الإيداع الثابت لهذا الحساب"
-                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] font-mono-num text-[#f09599] outline-none focus:border-[#d9535b]"
+                        placeholder="رقم الوكيل الثابت لهذا الحساب"
+                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] font-mono-num text-[#f09599] outline-none focus:border-[#d15b62]"
                       />
                       <select
                         value={editFixedDepMethod}
                         onChange={(e) => setEditFixedDepMethod(e.target.value)}
-                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                        className="rounded-lg border border-[#c4454b]/22 bg-[#1a1013]/85 px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                       >
                         {PAYMENT_METHOD_CHIPS.map((m) => (
                           <option key={m} value={m}>
@@ -1523,7 +1616,7 @@ export function AdminDashboardPage({
                   </div>
 
                   {pendingDeposits.length === 0 ? (
-                    <div className="rounded-xl border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md p-6 text-center text-[13px] text-[#a89497]">
+                    <div className="rounded-xl border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md p-6 text-center text-[13px] text-[#a38f92]">
                       لا توجد طلبات إيداع معلقة حاليًا
                     </div>
                   ) : (
@@ -1547,10 +1640,10 @@ export function AdminDashboardPage({
                                   {d.bankName}
                                 </span>
                               </div>
-                              <div className="text-[12px] text-[#d4c2c5] truncate">
+                              <div className="text-[12px] text-[#c7b3b6] truncate">
                                 {u ? `${u.displayName} (${u.email} · ${u.playerId})` : d.ownerName}
                               </div>
-                              <div className="text-[11px] font-mono-num text-[#a89497]">
+                              <div className="text-[11px] font-mono-num text-[#a38f92]">
                                 رقم التحويل: <span className="text-white">{d.requisiteNumber}</span>
                                 {d.customerNote ? ` · ${d.customerNote}` : ''}
                               </div>
@@ -1602,7 +1695,7 @@ export function AdminDashboardPage({
                   </div>
 
                   {pendingAgentWithdrawals.length === 0 ? (
-                    <div className="rounded-xl border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md p-6 text-center text-[13px] text-[#a89497]">
+                    <div className="rounded-xl border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md p-6 text-center text-[13px] text-[#a38f92]">
                       لا توجد طلبات سحب جديدة من اللاعبين حاليًا
                     </div>
                   ) : (
@@ -1626,10 +1719,10 @@ export function AdminDashboardPage({
                                   {w.destinationMethod}
                                 </span>
                               </div>
-                              <div className="text-[12px] text-[#d4c2c5] truncate">
+                              <div className="text-[12px] text-[#c7b3b6] truncate">
                                 {u ? `${u.displayName} (${u.email} · ${u.playerId})` : w.recipientName}
                               </div>
-                              <div className="text-[11px] font-mono-num text-[#a89497]">
+                              <div className="text-[11px] font-mono-num text-[#a38f92]">
                                 المحفظة/الحساب: <span className="text-white">{w.requisiteNumber}</span> · المستلم: {w.recipientName}
                               </div>
                             </div>
@@ -1763,11 +1856,11 @@ export function AdminDashboardPage({
                     )}
 
                     <div className="space-y-1">
-                      <label className="text-[12px] text-[#e0cfd2]">اختر المستخدم بالجيميل *</label>
+                      <label className="text-[12px] text-[#e2d4d6]">اختر المستخدم بالجيميل *</label>
                       <select
                         value={wdUserId}
                         onChange={(e) => setWdUserId(e.target.value)}
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d15b62]"
                       >
                         {users.length === 0 && <option value="">لا يوجد لاعبين بعد</option>}
                         {users.map((u) => (
@@ -1779,14 +1872,14 @@ export function AdminDashboardPage({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[12px] text-[#e0cfd2]">مبلغ السحب (جنيه مصري)</label>
+                      <label className="text-[12px] text-[#e2d4d6]">مبلغ السحب (جنيه مصري)</label>
                       <input
                         type="number"
                         min={1}
                         required
                         value={wdAmount}
                         onChange={(e) => setWdAmount(e.target.value)}
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[15px] font-bold font-mono-num text-[#f09599] outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[15px] font-bold font-mono-num text-[#f09599] outline-none focus:border-[#d15b62]"
                       />
                       <div className="flex flex-wrap gap-1.5">
                         {WD_PRESET_AMOUNTS.map((amt) => (
@@ -1796,8 +1889,8 @@ export function AdminDashboardPage({
                             onClick={() => setWdAmount(String(amt))}
                             className={`rounded-md border px-2 py-0.5 font-mono-num text-[11px] cursor-pointer whitespace-nowrap ${
                               Number(wdAmount) === amt
-                                ? 'border-[#d9535b] bg-[#c4454b]/28 text-[#f09599]'
-                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#cbb6b9]'
+                                ? 'border-[#d15b62] bg-[#c4454b]/28 text-[#f09599]'
+                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#c7b3b6]'
                             }`}
                           >
                             {amt.toLocaleString('en-US')} ج.م
@@ -1807,13 +1900,13 @@ export function AdminDashboardPage({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[12px] text-[#e0cfd2]">طريقة التحويل / وسيلة السحب</label>
+                      <label className="text-[12px] text-[#e2d4d6]">طريقة التحويل / وسيلة السحب</label>
                       <input
                         type="text"
                         required
                         value={wdMethod}
                         onChange={(e) => setWdMethod(e.target.value)}
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                       />
                       <div className="flex flex-wrap gap-1.5">
                         {PAYMENT_METHOD_CHIPS.map((m) => (
@@ -1823,8 +1916,8 @@ export function AdminDashboardPage({
                             onClick={() => setWdMethod(m)}
                             className={`rounded-md border px-2.5 py-1 text-[11.5px] cursor-pointer whitespace-nowrap ${
                               wdMethod === m
-                                ? 'border-[#d9535b] bg-[#c4454b]/28 text-white font-semibold'
-                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#cbb6b9]'
+                                ? 'border-[#d15b62] bg-[#c4454b]/28 text-white font-semibold'
+                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#c7b3b6]'
                             }`}
                           >
                             {m}
@@ -1835,35 +1928,35 @@ export function AdminDashboardPage({
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
-                        <label className="text-[12px] text-[#e0cfd2]">رقم المحفظة / الحساب</label>
+                        <label className="text-[12px] text-[#e2d4d6]">رقم المحفظة / الحساب</label>
                         <input
                           type="text"
                           required
                           value={wdNumber}
                           onChange={(e) => setWdNumber(e.target.value)}
-                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[12px] text-[#e0cfd2]">اسم المستلم</label>
+                        <label className="text-[12px] text-[#e2d4d6]">اسم المستلم</label>
                         <input
                           type="text"
                           value={wdRecipient}
                           onChange={(e) => setWdRecipient(e.target.value)}
                           placeholder="اسم المستلم"
-                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                          className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[12px] text-[#e0cfd2]">نص الرسالة (اختياري)</label>
+                      <label className="text-[12px] text-[#e2d4d6]">نص الرسالة (اختياري)</label>
                       <textarea
                         rows={2}
                         value={wdNote}
                         onChange={(e) => setWdNote(e.target.value)}
                         placeholder="طلب سحب من رصيدك، برجاء القبول لخصم المبلغ أو الرفض"
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
 
@@ -1915,6 +2008,8 @@ export function AdminDashboardPage({
                           identifier: instantDepIdentifier.trim(),
                           amountEgp: amt,
                           bankName: instantDepMethod.trim() || 'إيداع فوري من الإدارة',
+                          depositNumber: instantDepNumber.trim() || undefined,
+                          saveAsFixed: instantSaveFixedDep && Boolean(instantDepNumber.trim()),
                           note: instantDepNote.trim() || undefined,
                           autoCredit: true,
                         });
@@ -1925,7 +2020,7 @@ export function AdminDashboardPage({
                             instantDepIdentifier;
                           setInstantDepFeedback({
                             type: 'success',
-                            text: `تم إيداع +${formatMoney(amt)} ج.م لحساب ${targetName} بنجاح`,
+                            text: `تم إيداع +${formatMoney(amt)} ج.م لحساب ${targetName} بنجاح${instantDepNumber.trim() ? ` (رقم الإيداع: ${instantDepNumber.trim()})` : ''}`,
                           });
                           onNotify('success', `تم إيداع ${formatMoney(amt)} ج.م`, targetName);
                           setInstantDepNote('');
@@ -1953,12 +2048,15 @@ export function AdminDashboardPage({
                     )}
 
                     <div className="space-y-1">
-                      <label className="text-[12px] text-[#e0cfd2]">اختر الجيميل بتاع العميل</label>
+                      <label className="text-[12px] text-[#e2d4d6]">اختر الجيميل بتاع العميل</label>
                       <select
                         value={matchedDepUser?.id ?? ''}
                         onChange={(e) => {
                           const found = users.find((u) => u.id === e.target.value);
                           setInstantDepIdentifier(found ? found.email : '');
+                          if (found?.fixedDepositNumber) {
+                            setInstantDepNumber(found.fixedDepositNumber);
+                          }
                         }}
                         className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#00e344]"
                       >
@@ -1972,7 +2070,7 @@ export function AdminDashboardPage({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[12px] text-[#e0cfd2]">
+                      <label className="text-[12px] text-[#e2d4d6]">
                         أو اكتب الجيميل / ID اللاعب / اليوزرنيم
                       </label>
                       <input
@@ -2001,7 +2099,7 @@ export function AdminDashboardPage({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[12px] text-[#e0cfd2]">مبلغ الإيداع (جنيه مصري)</label>
+                      <label className="text-[12px] text-[#e2d4d6]">مبلغ الإيداع (جنيه مصري)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -2020,7 +2118,7 @@ export function AdminDashboardPage({
                             className={`rounded-md border px-2 py-0.5 font-mono-num text-[11px] cursor-pointer whitespace-nowrap ${
                               Number(instantDepAmount) === amt
                                 ? 'border-[#00e344] bg-[#00e344]/20 text-[#00e344]'
-                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#cbb6b9]'
+                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#c7b3b6]'
                             }`}
                           >
                             +{amt.toLocaleString('en-US')} ج.م
@@ -2030,12 +2128,12 @@ export function AdminDashboardPage({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[12px] text-[#e0cfd2]">طريقة الإيداع</label>
+                      <label className="text-[12px] text-[#e2d4d6]">طريقة الإيداع</label>
                       <input
                         type="text"
                         value={instantDepMethod}
                         onChange={(e) => setInstantDepMethod(e.target.value)}
-                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                       />
                       <div className="flex flex-wrap gap-1.5">
                         {PAYMENT_METHOD_CHIPS.map((ch) => (
@@ -2045,8 +2143,8 @@ export function AdminDashboardPage({
                             onClick={() => setInstantDepMethod(ch)}
                             className={`rounded-md border px-2.5 py-1 text-[11.5px] cursor-pointer whitespace-nowrap ${
                               instantDepMethod === ch
-                                ? 'border-[#d9535b] bg-[#c4454b]/28 text-white font-semibold'
-                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#cbb6b9]'
+                                ? 'border-[#d15b62] bg-[#c4454b]/28 text-white font-semibold'
+                                : 'border-[#c4454b]/22 bg-[#12090b]/70 text-[#c7b3b6]'
                             }`}
                           >
                             {ch}
@@ -2055,8 +2153,32 @@ export function AdminDashboardPage({
                       </div>
                     </div>
 
+                    <div className="space-y-1.5">
+                      <label className="text-[12px] text-[#e2d4d6]">
+                        رقم الإيداع (محفظة / باينانس — اختياري)
+                      </label>
+                      <input
+                        type="text"
+                        value={instantDepNumber}
+                        onChange={(e) => setInstantDepNumber(e.target.value)}
+                        placeholder={
+                          matchedDepUser?.fixedDepositNumber || 'مثال: 01012345678 أو Binance ID'
+                        }
+                        className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 font-mono-num text-[13px] text-white outline-none focus:border-[#00e344]"
+                      />
+                      <label className="flex items-center gap-2 text-[11.5px] text-[#c7b3b6] cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={instantSaveFixedDep}
+                          onChange={(e) => setInstantSaveFixedDep(e.target.checked)}
+                          className="h-3.5 w-3.5 accent-[#c4454b] rounded cursor-pointer"
+                        />
+                        <span>حفظ الرقم كرقم إيداع ثابت للحساب</span>
+                      </label>
+                    </div>
+
                     <div className="space-y-1">
-                      <label className="text-[12px] text-[#e0cfd2]">ملاحظة (اختياري)</label>
+                      <label className="text-[12px] text-[#e2d4d6]">ملاحظة (اختياري)</label>
                       <input
                         type="text"
                         value={instantDepNote}
@@ -2088,7 +2210,7 @@ export function AdminDashboardPage({
                   </div>
                   <div className="overflow-x-auto max-h-80 overflow-y-auto scrollbar-dark">
                     <table className="w-full border-collapse text-start text-[12.5px]">
-                      <thead className="bg-[#241317]/75 text-[11px] text-[#d4c2c5]">
+                      <thead className="bg-[#241317]/75 text-[11px] text-[#c7b3b6]">
                         <tr>
                           <th className="py-2.5 px-3.5 text-start">الطلب</th>
                           <th className="py-2.5 px-3.5 text-start">اللاعب</th>
@@ -2104,11 +2226,11 @@ export function AdminDashboardPage({
                             <tr key={w.id} className="hover:bg-[#241317]/60">
                               <td className="py-2.5 px-3.5 font-mono-num text-white">
                                 <div>{w.orderId}</div>
-                                <div className="text-[10px] font-sans text-[#a89497]">
+                                <div className="text-[10px] font-sans text-[#a38f92]">
                                   {w.requestedByAgent ? 'طلب لاعب (بدون خصم)' : 'مرسل من الإدارة'}
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3.5 text-[#e6d5d8]">
+                              <td className="py-2.5 px-3.5 text-[#e2d4d6]">
                                 {u ? u.displayName : 'عام'}
                               </td>
                               <td className="py-2.5 px-3.5 font-mono-num font-bold text-[#f09599]">
@@ -2131,7 +2253,7 @@ export function AdminDashboardPage({
                                   <StatusBadge status={w.status} lang="ar" />
                                 )}
                               </td>
-                              <td className="py-2.5 px-3.5 font-mono-num text-[11px] text-[#9e898c]">
+                              <td className="py-2.5 px-3.5 font-mono-num text-[11px] text-[#a38f92]">
                                 {formatDateTime(w.createdAt, state.settings)}
                               </td>
                             </tr>
@@ -2148,7 +2270,7 @@ export function AdminDashboardPage({
                   </div>
                   <div className="overflow-x-auto max-h-80 overflow-y-auto scrollbar-dark">
                     <table className="w-full border-collapse text-start text-[12.5px]">
-                      <thead className="bg-[#241317]/75 text-[11px] text-[#d4c2c5]">
+                      <thead className="bg-[#241317]/75 text-[11px] text-[#c7b3b6]">
                         <tr>
                           <th className="py-2.5 px-3.5 text-start">رقم العملية</th>
                           <th className="py-2.5 px-3.5 text-start">العميل</th>
@@ -2163,11 +2285,16 @@ export function AdminDashboardPage({
                           return (
                             <tr key={d.id} className="hover:bg-[#241317]/60">
                               <td className="py-2.5 px-3.5 font-mono-num text-white">{d.orderId}</td>
-                              <td className="py-2.5 px-3.5 text-[#e6d5d8]">
+                              <td className="py-2.5 px-3.5 text-[#e2d4d6]">
                                 {u ? u.email : d.ownerName}
                               </td>
-                              <td className="py-2.5 px-3.5 text-[11.5px] text-[#d4c2c5]">
-                                {d.bankName}
+                              <td className="py-2.5 px-3.5 text-[11.5px] text-[#c7b3b6]">
+                                <div>{d.bankName}</div>
+                                {d.requisiteNumber && (
+                                  <div className="font-mono-num text-[10.5px] text-[#f29b9f]">
+                                    {d.requisiteNumber}
+                                  </div>
+                                )}
                               </td>
                               <td className="py-2.5 px-3.5 font-mono-num font-bold text-[#00e344]">
                                 +{formatMoney(d.amountLocal)} ج.م
@@ -2221,7 +2348,7 @@ export function AdminDashboardPage({
                   <select
                     value={msgUserId}
                     onChange={(e) => setMsgUserId(e.target.value)}
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d15b62]"
                   >
                     {users.length === 0 && <option value="">لا يوجد لاعبين بعد</option>}
                     {users.map((u) => (
@@ -2235,7 +2362,7 @@ export function AdminDashboardPage({
                     value={msgSender}
                     onChange={(e) => setMsgSender(e.target.value)}
                     placeholder="المرسل"
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                   />
                   <textarea
                     rows={3}
@@ -2243,7 +2370,7 @@ export function AdminDashboardPage({
                     value={msgBody}
                     onChange={(e) => setMsgBody(e.target.value)}
                     placeholder="اكتب نص الرسالة..."
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                   />
                   <button
                     type="submit"
@@ -2261,7 +2388,7 @@ export function AdminDashboardPage({
                       className="rounded-lg border border-[#c4454b]/20 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12px]"
                     >
                       <div className="font-semibold text-[#f09599]">{m.sender}</div>
-                      <div className="text-[#e6d5d8] mt-0.5">{m.body}</div>
+                      <div className="text-[#e2d4d6] mt-0.5">{m.body}</div>
                     </div>
                   ))}
                 </div>
@@ -2282,13 +2409,15 @@ export function AdminDashboardPage({
                         identifier: depIdentifier.trim(),
                         amountEgp: amt,
                         bankName: depMethod.trim() || 'فودافون كاش',
+                        depositNumber: depNumber.trim() || undefined,
+                        saveAsFixed: depSaveFixed && Boolean(depNumber.trim()),
                         note: depNote.trim() || undefined,
                         autoCredit: true,
                       });
                       if (res.ok) {
                         setOrderDepFeedback({
                           type: 'success',
-                          text: `تم إيداع +${formatMoney(amt)} ج.م بنجاح`,
+                          text: `تم إيداع +${formatMoney(amt)} ج.م بنجاح${depNumber.trim() ? ` (رقم: ${depNumber.trim()})` : ''}`,
                         });
                         setDepNote('');
                         onNotify('success', 'تم إضافة الإيداع ونزوله تلقائيًا');
@@ -2317,8 +2446,11 @@ export function AdminDashboardPage({
                     onChange={(e) => {
                       const found = users.find((u) => u.id === e.target.value);
                       setDepIdentifier(found ? found.email : '');
+                      if (found?.fixedDepositNumber) {
+                        setDepNumber(found.fixedDepositNumber);
+                      }
                     }}
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d15b62]"
                   >
                     <option value="">— اختر الجيميل بتاع العميل —</option>
                     {users.map((u) => (
@@ -2332,7 +2464,7 @@ export function AdminDashboardPage({
                     value={depIdentifier}
                     onChange={(e) => setDepIdentifier(e.target.value)}
                     placeholder="أو اكتب الجيميل / ID اللاعب"
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                   />
                   <input
                     type="number"
@@ -2342,12 +2474,12 @@ export function AdminDashboardPage({
                     value={depAmount}
                     onChange={(e) => setDepAmount(e.target.value)}
                     placeholder="مبلغ الإيداع (جنيه مصري)"
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[14px] font-bold font-mono-num text-[#00e344] outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[14px] font-bold font-mono-num text-[#00e344] outline-none focus:border-[#d15b62]"
                   />
                   <select
                     value={depMethod}
                     onChange={(e) => setDepMethod(e.target.value)}
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[13px] text-white outline-none focus:border-[#d15b62]"
                   >
                     {PAYMENT_METHOD_CHIPS.map((m) => (
                       <option key={m} value={m}>
@@ -2355,12 +2487,33 @@ export function AdminDashboardPage({
                       </option>
                     ))}
                   </select>
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      value={depNumber}
+                      onChange={(e) => setDepNumber(e.target.value)}
+                      placeholder={
+                        matchedOrderDepUser?.fixedDepositNumber ||
+                        'رقم الإيداع (اختياري — مثال: 01012345678)'
+                      }
+                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 font-mono-num text-[13px] text-white outline-none focus:border-[#d15b62]"
+                    />
+                    <label className="flex items-center gap-2 text-[11.5px] text-[#c7b3b6] cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={depSaveFixed}
+                        onChange={(e) => setDepSaveFixed(e.target.checked)}
+                        className="h-3.5 w-3.5 accent-[#c4454b] rounded cursor-pointer"
+                      />
+                      <span>حفظ كرقم ثابت للحساب</span>
+                    </label>
+                  </div>
                   <input
                     type="text"
                     value={depNote}
                     onChange={(e) => setDepNote(e.target.value)}
                     placeholder="ملاحظة (اختياري)"
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2 text-[12.5px] text-white outline-none focus:border-[#d15b62]"
                   />
                   <button
                     type="submit"
@@ -2385,7 +2538,7 @@ export function AdminDashboardPage({
                           </span>
                           <span className="text-[11px] text-[#f3a6aa]">({d.bankName})</span>
                         </div>
-                        <div className="text-[11px] text-[#a89497] font-mono-num truncate">
+                        <div className="text-[11px] text-[#a38f92] font-mono-num truncate">
                           {d.ownerName} · رقم: {d.requisiteNumber}
                         </div>
                       </div>
@@ -2476,7 +2629,7 @@ export function AdminDashboardPage({
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-[12px] text-[#e0cfd2]">اسم المنصة (مثبّت لا يتغير)</label>
+                  <label className="text-[12px] text-[#e2d4d6]">اسم المنصة (مثبّت لا يتغير)</label>
                   <input
                     type="text"
                     value="Nexus Agency"
@@ -2487,14 +2640,14 @@ export function AdminDashboardPage({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[12px] text-[#e0cfd2]">سعر الدولار مقابل الجنيه المصري</label>
+                  <label className="text-[12px] text-[#e2d4d6]">سعر الدولار مقابل الجنيه المصري</label>
                   <input
                     type="number"
                     step="0.01"
                     required
                     value={usdRateInput}
                     onChange={(e) => setUsdRateInput(e.target.value)}
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[14px] font-mono-num text-[#f09599] outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[14px] font-mono-num text-[#f09599] outline-none focus:border-[#d15b62]"
                   />
                 </div>
 
@@ -2503,7 +2656,7 @@ export function AdminDashboardPage({
                     أرقام الإيداع الثابتة الافتراضية للمنصة
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[12px] text-[#e0cfd2]">
+                    <label className="text-[12px] text-[#e2d4d6]">
                       رقم الإيداع العام الافتراضي (للحسابات التي لم يحدد لها رقم خاص)
                     </label>
                     <input
@@ -2511,61 +2664,61 @@ export function AdminDashboardPage({
                       value={defaultDepNumInput}
                       onChange={(e) => setDefaultDepNumInput(e.target.value)}
                       placeholder="010xxxxxxxx"
-                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                      className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[13px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-[11.5px] text-[#e0cfd2]">رقم فودافون كاش</label>
+                      <label className="text-[11.5px] text-[#e2d4d6]">رقم فودافون كاش</label>
                       <input
                         type="text"
                         value={vodafoneDepNum}
                         onChange={(e) => setVodafoneDepNum(e.target.value)}
                         placeholder="010xxxxxxxx"
-                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11.5px] text-[#e0cfd2]">رقم اتصالات كاش</label>
+                      <label className="text-[11.5px] text-[#e2d4d6]">رقم اتصالات كاش</label>
                       <input
                         type="text"
                         value={etisalatDepNum}
                         onChange={(e) => setEtisalatDepNum(e.target.value)}
                         placeholder="011xxxxxxxx"
-                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11.5px] text-[#e0cfd2]">رقم أورنج كاش</label>
+                      <label className="text-[11.5px] text-[#e2d4d6]">رقم أورنج كاش</label>
                       <input
                         type="text"
                         value={orangeDepNum}
                         onChange={(e) => setOrangeDepNum(e.target.value)}
                         placeholder="012xxxxxxxx"
-                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[11.5px] text-[#e0cfd2]">معرف باينانس (Binance ID)</label>
+                      <label className="text-[11.5px] text-[#e2d4d6]">معرف باينانس (Binance ID)</label>
                       <input
                         type="text"
                         value={binanceDepId}
                         onChange={(e) => setBinanceDepId(e.target.value)}
                         placeholder="Binance Pay ID / TRC-20"
-                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d9535b]"
+                        className="w-full rounded-[9px] border border-[#c4454b]/22 bg-[#1a1013]/80 px-3 py-2 text-[12.5px] font-mono-num text-white outline-none focus:border-[#d15b62]"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[12px] text-[#e0cfd2]">تغيير كلمة مرور الأدمن (اختياري)</label>
+                  <label className="text-[12px] text-[#e2d4d6]">تغيير كلمة مرور الأدمن (اختياري)</label>
                   <input
                     type="password"
                     value={newAdminPass}
                     onChange={(e) => setNewAdminPass(e.target.value)}
                     placeholder="سيبه فاضي لو مش عايز تغيرها"
-                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d9535b]"
+                    className="w-full rounded-[10px] border border-[#c4454b]/22 bg-[#12090b]/70 backdrop-blur-md px-3 py-2.5 text-[13px] text-white outline-none focus:border-[#d15b62]"
                   />
                 </div>
 
@@ -2599,32 +2752,32 @@ export function AdminDashboardPage({
               <button
                 type="button"
                 onClick={() => setPreviewUser(null)}
-                className="rounded-lg p-1 text-[#b8a5a8] hover:bg-[#2a171b] hover:text-white cursor-pointer"
+                className="rounded-lg p-1 text-[#c7b3b6] hover:bg-[#280e14] hover:text-white cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="space-y-2 text-[13px] font-mono-num bg-[#12090b]/75 rounded-xl p-3.5 border border-[#c4454b]/22">
               <div className="flex justify-between">
-                <span className="text-[#a89497]">Player ID:</span>
+                <span className="text-[#a38f92]">Player ID:</span>
                 <span className="text-[#f09599] font-bold">{previewUser.playerId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#a89497]">البريد:</span>
+                <span className="text-[#a38f92]">البريد:</span>
                 <span className="text-white">{previewUser.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#a89497]">اليوزرنيم:</span>
+                <span className="text-[#a38f92]">اليوزرنيم:</span>
                 <span className="text-[#f3a6aa]">@{previewUser.username}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#a89497]">رقم الإيداع الثابت:</span>
+                <span className="text-[#a38f92]">رقم الوكيل الثابت:</span>
                 <span className="text-white font-bold">
-                  {previewUser.fixedDepositNumber || 'الافتراضي للمنصة'}
+                  {previewUser.fixedDepositNumber || 'غير معيّن بعد'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#a89497]">الرصيد:</span>
+                <span className="text-[#a38f92]">الرصيد:</span>
                 <span className="text-[#00e344] font-bold">
                   {formatMoney(previewUser.balanceEgp)} ج.م
                 </span>

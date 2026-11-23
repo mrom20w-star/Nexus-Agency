@@ -213,6 +213,10 @@ export async function runLocalAdminAction(
     const prefix = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'agent';
     const playerId = generatePlayerId(db.users);
     const now = new Date().toISOString();
+    const fixedDepNum = String(payload.fixedDepositNumber ?? '').trim();
+    const fixedDepMethod = fixedDepNum
+      ? String(payload.fixedDepositMethod ?? '').trim() || 'فودافون كاش'
+      : '';
     const user: ManagedUser = {
       id: `usr_${Date.now()}`,
       playerId,
@@ -234,6 +238,8 @@ export async function runLocalAdminAction(
       referralRatePct: 0.5,
       twoFactorEnabled: true,
       trc20Address: 'TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1',
+      fixedDepositNumber: fixedDepNum,
+      fixedDepositMethod: fixedDepMethod,
       createdAt: now,
     };
     db.users.unshift(user);
@@ -270,7 +276,7 @@ export async function runLocalAdminAction(
     const identNoAt = ident.replace(/^@/, '');
     const depositNumber = String(payload.depositNumber ?? '').trim();
     const depositMethod = String(payload.depositMethod ?? '').trim();
-    if (!depositNumber) return { ok: false, error: 'اكتب رقم الإيداع الثابت أولاً' };
+    if (!depositNumber) return { ok: false, error: 'اكتب رقم الوكيل الثابت أولاً' };
     const idx = db.users.findIndex(
       (u) =>
         (targetId && u.id === targetId) ||
@@ -407,11 +413,21 @@ export async function runLocalAdminAction(
     const amount = Math.max(1, Number(payload.amountEgp) || 0);
     const rate = Number(db.config.usdRate) || 49.85;
     const autoCredit = payload.autoCredit !== false;
+    const cleanDepNum = String(payload.depositNumber ?? '').trim();
+    const saveAsFixed = Boolean(payload.saveAsFixed && cleanDepNum);
     const now = new Date().toISOString();
     if (autoCredit) {
       db.users[idx].balanceEgp = Number(((db.users[idx].balanceEgp || 0) + amount).toFixed(2));
     }
+    if (saveAsFixed) {
+      db.users[idx].fixedDepositNumber = cleanDepNum;
+      const bankCandidate = String(payload.bankName ?? '').trim();
+      if (bankCandidate) {
+        db.users[idx].fixedDepositMethod = bankCandidate;
+      }
+    }
     const targetUser = db.users[idx];
+    const resolvedReqNum = cleanDepNum || targetUser.fixedDepositNumber || targetUser.username;
     const dep: DepositOrder = {
       id: `dep_${Date.now()}`,
       userId: targetUser.id,
@@ -424,7 +440,7 @@ export async function runLocalAdminAction(
       requisiteId: 'req_admin',
       bankName: String(payload.bankName ?? '').trim() || 'إيداع فوري من الإدارة',
       ownerName: targetUser.displayName,
-      requisiteNumber: targetUser.username,
+      requisiteNumber: resolvedReqNum,
       status: autoCredit ? 'completed' : 'pending',
       createdAt: now,
       expiresAt: new Date(Date.now() + 900_000).toISOString(),

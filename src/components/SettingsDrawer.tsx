@@ -75,10 +75,10 @@ export function SettingsDrawer({
           />
         </section>
 
-        <div className="h-px bg-[#e05b64]/22" />
+        <div className="h-px bg-[#c4454b]/22" />
 
         <section className="space-y-3">
-          <h3 className="text-[12.5px] font-semibold text-[#d4b6ba] uppercase tracking-wide">
+          <h3 className="text-[12.5px] font-semibold text-[#c7b3b6] uppercase tracking-wide">
             {t(lang, 'layoutSection')}
           </h3>
 
@@ -119,25 +119,25 @@ export function SettingsDrawer({
             onChange={(v) => onUpdate({ sidebarCollapsedDesktop: v })}
           />
 
-          <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#e05b64]/24 bg-[#2e1117]/60 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#c4454b]/24 bg-[#2c1016]/60 px-3 py-2.5">
             <span className="text-[13.5px] font-medium text-white">{t(lang, 'tableScale')}</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 disabled={settings.tableZoom <= 80}
                 onClick={() => onUpdate({ tableZoom: Math.max(80, settings.tableZoom - 5) })}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#e05b64]/28 bg-[#3a151e]/75 text-white disabled:opacity-40 cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#c4454b]/28 bg-[#311118]/75 text-white disabled:opacity-40 cursor-pointer"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="w-12 text-center text-[13px] font-mono-num text-[#e6c9ce]">
+              <span className="w-12 text-center text-[13px] font-mono-num text-[#c7b3b6]">
                 {settings.tableZoom}%
               </span>
               <button
                 type="button"
                 disabled={settings.tableZoom >= 120}
                 onClick={() => onUpdate({ tableZoom: Math.min(120, settings.tableZoom + 5) })}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#e05b64]/28 bg-[#3a151e]/75 text-white disabled:opacity-40 cursor-pointer"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-[#c4454b]/28 bg-[#311118]/75 text-white disabled:opacity-40 cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -145,10 +145,10 @@ export function SettingsDrawer({
           </div>
         </section>
 
-        <div className="h-px bg-[#e05b64]/22" />
+        <div className="h-px bg-[#c4454b]/22" />
 
         <section className="space-y-3">
-          <h3 className="text-[12.5px] font-semibold text-[#d4b6ba] uppercase tracking-wide">
+          <h3 className="text-[12.5px] font-semibold text-[#c7b3b6] uppercase tracking-wide">
             {t(lang, 'behaviourSection')}
           </h3>
 
@@ -207,10 +207,10 @@ function SettingSelectRow({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-[#c4454b]/25 bg-[#160f11] px-2.5 py-1.5 text-[12.5px] text-white outline-none focus:border-[#d15b62] cursor-pointer"
+        className="rounded-lg border border-[#c4454b]/25 bg-[#160d10] px-2.5 py-1.5 text-[12.5px] text-white outline-none focus:border-[#d15b62] cursor-pointer"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value} className="bg-[#171012]">
+          <option key={opt.value} value={opt.value} className="bg-[#160d10]">
             {opt.label}
           </option>
         ))}
@@ -242,7 +242,7 @@ function SettingSwitchRow({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-          checked ? 'bg-[#b83b44]/85' : 'bg-[#362629]'
+          checked ? 'bg-[#b83b44]/85' : 'bg-[#311118]'
         }`}
       >
         <span

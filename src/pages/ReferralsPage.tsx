@@ -38,7 +38,7 @@ export function ReferralsPage({
   return (
     <div className="h-full overflow-y-auto scrollbar-dark p-4 lg:p-6 space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md p-5 space-y-3">
+        <div className="md:col-span-2 rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md p-5 space-y-3">
           <div className="flex items-center gap-2 text-[14px] font-semibold text-white">
             <Users className="h-4.5 w-4.5 text-[#f09599]" />
             <span>{t(lang, 'referralLink')}</span>
@@ -61,7 +61,7 @@ export function ReferralsPage({
           </div>
         </div>
 
-        <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md p-5 flex flex-col justify-between">
+        <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md p-5 flex flex-col justify-between">
           <div className="text-[12px] text-[#a38f92]">{t(lang, 'referralCommission')}</div>
           <div className="text-[24px] font-bold font-mono-num text-[#00e344]">
             +{formatNumber(totalEarned)} {currLabel}
@@ -72,13 +72,13 @@ export function ReferralsPage({
         </div>
       </div>
 
-      <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md overflow-hidden">
+      <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md overflow-hidden">
         <div className="border-b border-[#c4454b]/18 px-5 py-3.5 text-[14px] font-semibold text-white">
           {t(lang, 'partnersList')}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-start text-[13px]">
-            <thead className="bg-[#311118]/78 text-[12px] text-[#e2c7cb]">
+            <thead className="bg-[#311118]/78 text-[12px] text-[#c7b3b6]">
               <tr>
                 <th className="py-2.5 px-4 text-start">{lang === 'ar' ? 'كود الوكيل' : 'Partner Code'}</th>
                 <th className="py-2.5 px-4 text-start">{lang === 'ar' ? `حجم الشغل (${currLabel})` : 'Volume (EGP)'}</th>

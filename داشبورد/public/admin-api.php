@@ -305,6 +305,8 @@ switch ($action) {
         }
         $prefix = preg_replace('/[^a-zA-Z0-9_]/', '', explode('@', $email)[0]) ?: 'agent';
         $pid = !empty($body['playerId']) ? trim((string)$body['playerId']) : generate_player_id($db['users']);
+        $fixedDepNum = trim((string)($body['fixedDepositNumber'] ?? ''));
+        $fixedDepMethod = $fixedDepNum !== '' ? (trim((string)($body['fixedDepositMethod'] ?? '')) ?: 'فودافون كاش') : '';
         $newUser = [
             'id' => !empty($body['id']) ? trim((string)$body['id']) : ('usr_' . (int)(microtime(true) * 1000)),
             'playerId' => $pid,
@@ -326,6 +328,8 @@ switch ($action) {
             'referralRatePct' => 0.5,
             'twoFactorEnabled' => true,
             'trc20Address' => 'TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1',
+            'fixedDepositNumber' => $fixedDepNum,
+            'fixedDepositMethod' => $fixedDepMethod,
             'createdAt' => gmdate('c'),
         ];
         array_unshift($db['users'], $newUser);

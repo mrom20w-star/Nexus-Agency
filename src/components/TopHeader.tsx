@@ -81,9 +81,9 @@ export function TopHeader({
   const currLabel = lang === 'ar' && currentAccount.currency === 'EGP' ? 'ج.م' : currentAccount.currency;
 
   return (
-    <header className="fixed top-0 inset-x-0 z-40 h-[3.75rem] bg-[#2a0f15]/58 backdrop-blur-xl border-b border-[#e05b64]/28 flex items-center">
+    <header className="fixed top-0 inset-x-0 z-40 h-[3.75rem] bg-[#280e14]/58 backdrop-blur-xl border-b border-[#c4454b]/28 flex items-center">
       <div
-        className={`hidden lg:flex h-full items-center border-e border-[#e05b64]/24 shrink-0 transition-[width] duration-300 ${
+        className={`hidden lg:flex h-full items-center border-e border-[#c4454b]/24 shrink-0 transition-[width] duration-300 ${
           sidebarCollapsed ? 'w-[4rem] justify-center px-0' : 'w-[20rem] px-5 justify-between'
         }`}
       >
@@ -98,7 +98,7 @@ export function TopHeader({
             onClick={onOpenSettings}
             title={t(lang, 'settingsTitle')}
             aria-label={t(lang, 'settingsTitle')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e05b64]/28 bg-[#38141c]/65 text-[#e6c9ce] hover:text-white transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c4454b]/28 bg-[#311118]/65 text-[#c7b3b6] hover:text-white transition-colors cursor-pointer"
           >
             <Settings className="h-4 w-4" />
           </button>
@@ -111,7 +111,7 @@ export function TopHeader({
             type="button"
             onClick={onOpenMobileSidebar}
             aria-label="Open menu"
-            className="lg:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#24181b]/80 text-white hover:bg-[#2c1c20] cursor-pointer"
+            className="lg:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#241317]/80 text-white hover:bg-[#2c1016] cursor-pointer"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -124,7 +124,7 @@ export function TopHeader({
                   <span className="hidden sm:inline text-[#a38f92] font-medium whitespace-nowrap">
                     {t(lang, meta.parent)}
                   </span>
-                  <span className="hidden sm:inline text-[#6e585c]">/</span>
+                  <span className="hidden sm:inline text-[#7a6468]">/</span>
                 </>
               )}
               <h1 className="font-medium text-white truncate whitespace-nowrap">
@@ -144,7 +144,7 @@ export function TopHeader({
             onClick={onOpenSettings}
             title={t(lang, 'settingsTitle')}
             aria-label={t(lang, 'settingsTitle')}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#24181b]/80 text-[#c7b3b6] hover:bg-[#2c1c20] hover:text-white transition-colors cursor-pointer"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#241317]/80 text-[#c7b3b6] hover:bg-[#2c1016] hover:text-white transition-colors cursor-pointer"
           >
             <PanelRightOpen className="h-4 w-4" />
           </button>

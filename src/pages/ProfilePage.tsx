@@ -8,6 +8,7 @@ import {
   Inbox,
   Info,
   Landmark,
+  Lock,
   MinusSquare,
   Plus,
   PlusSquare,
@@ -95,7 +96,10 @@ export function ProfilePage({
   const [historyTab, setHistoryTab] = useState<'deposit' | 'withdrawals'>('deposit');
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [amountInput, setAmountInput] = useState('1000');
-  const [paymentMethod, setPaymentMethod] = useState<AllowedPaymentMethod>('فودافون كاش');
+  const [paymentMethod, setPaymentMethod] = useState<AllowedPaymentMethod>(() => {
+    const candidate = currentAccount.fixedDepositMethod as AllowedPaymentMethod | undefined;
+    return candidate && ALLOWED_PAYMENT_METHODS.includes(candidate) ? candidate : 'فودافون كاش';
+  });
   const [senderNumber, setSenderNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
@@ -103,9 +107,23 @@ export function ProfilePage({
   const safePlayerId = profile.playerId || profile.traderId || 'PL-00000001';
   const safeUuid = currentAccount.uuid || '01a1a848-4f12-7901-b4a2-884019e3c102';
   const safeEmail = profile.email || '—';
+  const hasFixedAgentNumber = Boolean((currentAccount.fixedDepositNumber || '').trim());
+  const lockedAgentMethod =
+    hasFixedAgentNumber &&
+    currentAccount.fixedDepositMethod &&
+    ALLOWED_PAYMENT_METHODS.includes(currentAccount.fixedDepositMethod as AllowedPaymentMethod)
+      ? (currentAccount.fixedDepositMethod as AllowedPaymentMethod)
+      : null;
   const fixedNumberForAccount =
     (currentAccount.fixedDepositNumber || profile.fixedDepositNumber || config.defaultDepositNumber || '').trim();
-  const activeDepositNumber = resolveDepositNumber(paymentMethod, currentAccount, config);
+  const activeDepositNumber = resolveDepositNumber(lockedAgentMethod ?? paymentMethod, currentAccount, config);
+
+  useEffect(() => {
+    const candidate = currentAccount.fixedDepositMethod as AllowedPaymentMethod | undefined;
+    if (candidate && ALLOWED_PAYMENT_METHODS.includes(candidate)) {
+      setPaymentMethod(candidate);
+    }
+  }, [currentAccount.fixedDepositMethod]);
 
   useEffect(() => {
     if (triggerCreate) {
@@ -154,7 +172,7 @@ export function ProfilePage({
       desc: lang === 'ar' ? 'وسيلة دفع واحدة: فودافون · اتصالات · أورنج · باينانس' : 'Single method: Vodafone · Etisalat · Orange · Binance',
       count: requisitesCount,
       icon: <CreditCard className="h-4.5 w-4.5" />,
-      accent: 'text-[#e87d82] bg-[#b83b44]/15 border-[#c4454b]/30',
+      accent: 'text-[#f09599] bg-[#b83b44]/15 border-[#c4454b]/30',
     },
     {
       route: '/messages',
@@ -177,7 +195,7 @@ export function ProfilePage({
     <div className="flex h-full min-h-0 flex-col bg-transparent">
       <div className="flex-1 overflow-y-auto scrollbar-dark">
         <div className="border-b border-[#c4454b]/20 px-4 lg:px-6 py-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e05b64]/30 bg-gradient-to-l from-[#b83b44]/28 via-[#2c1016]/65 to-[#280e14]/60 backdrop-blur-xl px-4 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#c4454b]/30 bg-gradient-to-l from-[#b83b44]/28 via-[#2c1016]/65 to-[#280e14]/60 backdrop-blur-xl px-4 py-3.5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-[16px] font-bold text-white">
@@ -228,19 +246,19 @@ export function ProfilePage({
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">{t(lang, 'balance')}</div>
               <div className="mt-1 font-mono-num text-[18px] font-bold text-[#00e344]">
                 {formatNumber(currentAccount.balanceUsdt)} {currLabel}
               </div>
             </div>
-            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">{t(lang, 'frozen')}</div>
               <div className="mt-1 font-mono-num text-[18px] font-bold text-[#f09599]">
                 {formatNumber(currentAccount.frozenUsdt)} {currLabel}
               </div>
             </div>
-            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">
                 {lang === 'ar' ? 'الإيداعات / بانتظار الإدارة' : 'Deposits / Pending'}
               </div>
@@ -251,7 +269,7 @@ export function ProfilePage({
                 </span>
               </div>
             </div>
-            <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
+            <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3">
               <div className="text-[12px] text-[#a38f92]">
                 {lang === 'ar' ? 'طلبات السحب والوسيلة' : 'Withdrawals & Method'}
               </div>
@@ -271,7 +289,7 @@ export function ProfilePage({
                   key={item.route}
                   type="button"
                   onClick={() => onNavigate(item.route)}
-                  className="flex items-center justify-between gap-3 rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md hover:border-[#c4454b]/55 hover:bg-[#221619]/80 px-4 py-3 text-start transition-colors cursor-pointer"
+                  className="flex items-center justify-between gap-3 rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md hover:border-[#c4454b]/55 hover:bg-[#201518]/80 px-4 py-3 text-start transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -300,7 +318,7 @@ export function ProfilePage({
         <div className="border-b border-[#c4454b]/20">
           <div className="flex items-center justify-between px-4 lg:px-6 py-3.5">
             <div className="flex items-center gap-2.5 text-[14.5px] font-medium text-white">
-              <HelpCircle className="h-[18px] w-[18px] text-[#e87d82]" />
+              <HelpCircle className="h-[18px] w-[18px] text-[#f09599]" />
               <span>{lang === 'ar' ? 'بيانات الحساب' : 'Account info'}</span>
             </div>
             <button
@@ -335,7 +353,8 @@ export function ProfilePage({
 
                 <div className="shrink-0 min-w-[220px] rounded-[12px] border border-[#c4454b]/35 bg-[#c4454b]/[0.12] backdrop-blur-md px-4 py-3.5">
                   <div className="flex items-center gap-2 text-[12px] text-[#f3a6aa]">
-                    <span>{lang === 'ar' ? 'رقم الإيداع الثابت' : 'Fixed Deposit Number'}</span>
+                    <Lock className="h-3 w-3 shrink-0" />
+                    <span>{lang === 'ar' ? 'رقم الوكيل الثابت' : 'Fixed Agent Number'}</span>
                     {fixedNumberForAccount && (
                       <button
                         type="button"
@@ -352,7 +371,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[295px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[295px] rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="flex items-center gap-2 text-[12px] text-[#a38f92]">
                     <span>{lang === 'ar' ? 'معرف الحساب' : 'account id'}</span>
                     <button
@@ -369,14 +388,14 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[165px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[165px] rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">{t(lang, 'balance')}</div>
                   <div className="mt-1.5 font-mono-num text-[14px] font-bold text-[#00e344]">
                     {formatNumber(currentAccount.balanceUsdt)} {currLabel}
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[210px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[210px] rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'البريد الإلكتروني' : 'email'}
                   </div>
@@ -385,18 +404,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[135px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
-                  <div className="text-[12px] text-[#a38f92]">
-                    {lang === 'ar' ? 'التأمين' : 'insurance'}
-                  </div>
-                  <div className="mt-1.5 font-mono-num text-[14px] font-semibold text-white">
-                    {currentAccount.insuranceAmount != null
-                      ? `${formatNumber(currentAccount.insuranceAmount)} ${currLabel}`
-                      : `— ${currLabel}`}
-                  </div>
-                </div>
-
-                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'عمولة الإيداع' : 'deposit fee'}
                   </div>
@@ -405,7 +413,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
+                <div className="shrink-0 min-w-[130px] rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5">
                   <div className="text-[12px] text-[#a38f92]">
                     {lang === 'ar' ? 'عمولة السحب' : 'withdrawal fee'}
                   </div>
@@ -414,7 +422,7 @@ export function ProfilePage({
                   </div>
                 </div>
 
-                <div className="shrink-0 min-w-[175px] rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5 flex items-center justify-between gap-4">
+                <div className="shrink-0 min-w-[175px] rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md px-4 py-3.5 flex items-center justify-between gap-4">
                   <div>
                     <div className="text-[12px] text-[#a38f92]">2FA</div>
                     <div className="mt-1 text-[13px] font-semibold text-white">
@@ -430,7 +438,7 @@ export function ProfilePage({
                       onNotify('success', t(lang, 'security2fa'));
                     }}
                     className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                      profile.twoFactorEnabled ? 'bg-[#b83b44]' : 'bg-[#35262a]'
+                      profile.twoFactorEnabled ? 'bg-[#b83b44]' : 'bg-[#311118]'
                     }`}
                   >
                     <span
@@ -450,7 +458,7 @@ export function ProfilePage({
         <div className="px-4 lg:px-6 py-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 text-[14.5px] font-medium text-white">
-              <Landmark className="h-[18px] w-[18px] text-[#e87d82]" />
+              <Landmark className="h-[18px] w-[18px] text-[#f09599]" />
               <span>{lang === 'ar' ? 'سجل الرصيد والعمليات' : 'Balance history'}</span>
             </div>
             <button
@@ -475,7 +483,7 @@ export function ProfilePage({
                   <span>{lang === 'ar' ? 'طلب إيداع جديد' : 'Create new deposit'}</span>
                 </button>
 
-                <div className="inline-flex items-center rounded-[10px] border border-[#e05b64]/28 bg-[#280e14]/56 p-1">
+                <div className="inline-flex items-center rounded-[10px] border border-[#c4454b]/28 bg-[#280e14]/56 p-1">
                   <button
                     type="button"
                     onClick={() => setHistoryTab('deposit')}
@@ -497,7 +505,7 @@ export function ProfilePage({
                 </div>
               </div>
 
-              <div className="rounded-[12px] border border-[#e05b64]/28 bg-[#280e14]/56 backdrop-blur-md overflow-hidden">
+              <div className="rounded-[12px] border border-[#c4454b]/28 bg-[#280e14]/56 backdrop-blur-md overflow-hidden">
                 {historyTab === 'deposit' ? (
                   deposits.length === 0 ? (
                     <div className="py-10 text-center text-[13.5px] text-[#a38f92]">
@@ -506,7 +514,7 @@ export function ProfilePage({
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse text-start text-[13px]">
-                        <thead className="bg-[#311118]/78 text-[12px] text-[#e2c7cb]">
+                        <thead className="bg-[#311118]/78 text-[12px] text-[#c7b3b6]">
                           <tr>
                             <th className="py-2.5 px-4 text-start">{t(lang, 'orderId')}</th>
                             <th className="py-2.5 px-4 text-start">{t(lang, 'bank')}</th>
@@ -544,7 +552,7 @@ export function ProfilePage({
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-start text-[13px]">
-                      <thead className="bg-[#311118]/78 text-[12px] text-[#e2c7cb]">
+                      <thead className="bg-[#311118]/78 text-[12px] text-[#c7b3b6]">
                         <tr>
                           <th className="py-2.5 px-4 text-start">{t(lang, 'orderId')}</th>
                           <th className="py-2.5 px-4 text-start">{t(lang, 'destinationMethod')}</th>
@@ -641,21 +649,41 @@ export function ProfilePage({
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-[12px] font-medium text-[#c7b3b6] block">
-              {lang === 'ar' ? 'اختر وسيلة الإيداع (وسيلة واحدة)' : 'Choose Payment Method'}
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[12px] font-medium text-[#c7b3b6] block">
+                {lockedAgentMethod
+                  ? lang === 'ar'
+                    ? 'وسيلة الدفع المعيّنة من الإدارة'
+                    : 'Payment Method (Admin Locked)'
+                  : lang === 'ar'
+                  ? 'اختر وسيلة الإيداع (وسيلة واحدة)'
+                  : 'Choose Payment Method'}
+              </label>
+              {lockedAgentMethod && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-[#c4454b]/35 bg-[#c4454b]/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#f3a6aa]">
+                  <Lock className="h-3 w-3" />
+                  <span>{lang === 'ar' ? 'ثابت من الإدارة' : 'Admin Locked'}</span>
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {ALLOWED_PAYMENT_METHODS.map((method) => {
-                const active = paymentMethod === method;
+                const active = (lockedAgentMethod ?? paymentMethod) === method;
+                const lockedOut = Boolean(lockedAgentMethod && lockedAgentMethod !== method);
                 return (
                   <button
                     key={method}
                     type="button"
-                    onClick={() => setPaymentMethod(method)}
-                    className={`rounded-[10px] border px-3 py-2.5 text-[13px] font-semibold transition-colors cursor-pointer ${
+                    disabled={lockedOut}
+                    onClick={() => {
+                      if (!lockedAgentMethod) setPaymentMethod(method);
+                    }}
+                    className={`rounded-[10px] border px-3 py-2.5 text-[13px] font-semibold transition-colors ${
                       active
-                        ? 'border-[#d15b62] bg-[#b83b44]/25 text-white'
-                        : 'border-[#c4454b]/22 bg-[#201518]/70 text-[#c7b3b6] hover:text-white'
+                        ? 'border-[#d15b62] bg-[#b83b44]/25 text-white cursor-default'
+                        : lockedOut
+                        ? 'border-[#c4454b]/15 bg-[#1a1013]/50 text-[#7d686b] opacity-45 cursor-not-allowed'
+                        : 'border-[#c4454b]/22 bg-[#201518]/70 text-[#c7b3b6] hover:text-white cursor-pointer'
                     }`}
                   >
                     {method}
@@ -669,10 +697,13 @@ export function ProfilePage({
             {activeDepositNumber ? (
               <>
                 <QrCodeSvg value={activeDepositNumber} size={126} />
-                <div className="text-[12px] font-semibold text-[#f3a6aa]">
-                  {lang === 'ar'
-                    ? 'حوّل المبلغ أولاً على هذا الرقم الثابت:'
-                    : 'Transfer first to this fixed deposit number:'}
+                <div className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#f3a6aa] text-center">
+                  <Lock className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {lang === 'ar'
+                      ? 'رقم الوكيل الثابت للإيداع (لا يمكن تغييره):'
+                      : 'Fixed Agent Number (Immutable):'}
+                  </span>
                 </div>
                 <div className="flex w-full items-center justify-between gap-2 rounded-lg border border-[#c4454b]/35 bg-[#120c0e]/85 px-3 py-2">
                   <span className="font-mono-num text-[14px] font-bold text-white truncate">
@@ -690,8 +721,8 @@ export function ProfilePage({
             ) : (
               <div className="text-center text-[12.5px] text-[#f28b94] py-2">
                 {lang === 'ar'
-                  ? 'لم يتم تعيين رقم إيداع ثابت لهذا الحساب من الإدارة بعد'
-                  : 'No fixed deposit number assigned by Admin yet'}
+                  ? 'لم يتم إضافة رقم وكيل ثابت لهذا الحساب من الإدارة بعد'
+                  : 'No fixed agent number assigned by Admin yet'}
               </div>
             )}
           </div>

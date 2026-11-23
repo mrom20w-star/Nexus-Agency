@@ -376,6 +376,38 @@ export function subscribeAdminCollections(callbacks: {
   };
 }
 
+async function syncUserRequisiteInFirestore(user: {
+  id: string;
+  displayName: string;
+  depositFeePct?: number;
+  fixedDepositNumber?: string;
+  fixedDepositMethod?: string;
+}): Promise<void> {
+  const reqId = `req_${user.id}`;
+  const reqRef = doc(firestoreDb, 'requisites', reqId);
+  const cleanNum = (user.fixedDepositNumber || '').trim();
+  if (!cleanNum) {
+    await deleteDoc(reqRef).catch(() => undefined);
+    return;
+  }
+  const methodName = (user.fixedDepositMethod || '').trim() || 'فودافون كاش';
+  await setDoc(reqRef, {
+    id: reqId,
+    userId: user.id,
+    accountId: `acc_${user.id}`,
+    bankName: methodName,
+    ownerName: user.displayName,
+    accountNumber: cleanNum,
+    type: methodName === 'باينانس' ? 'instapay' : 'wallet',
+    minOrder: 100,
+    maxOrder: 30000,
+    dailyLimit: 150000,
+    dailyUsed: 0,
+    bidRate: Number(user.depositFeePct ?? 3.0),
+    active: true,
+  });
+}
+
 export async function createFirestoreUser(payload: {
   email: string;
   password: string;
@@ -383,6 +415,8 @@ export async function createFirestoreUser(payload: {
   username: string;
   balanceEgp?: number;
   active?: boolean;
+  fixedDepositNumber?: string;
+  fixedDepositMethod?: string;
 }): Promise<{ ok: boolean; error?: string; user?: ManagedUser }> {
   const email = payload.email.trim();
   const password = payload.password.trim();
@@ -405,6 +439,10 @@ export async function createFirestoreUser(payload: {
     const id = `usr_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
     const salt = randomSalt();
     const passwordHash = await sha256Hex(`${salt}:${password}`);
+    const fixedDepNum = (payload.fixedDepositNumber || '').trim();
+    const fixedDepMethod = fixedDepNum
+      ? (payload.fixedDepositMethod || '').trim() || 'فودافون كاش'
+      : '';
 
     const rawUser: ManagedUser & { passwordSalt: string; passwordHash: string } = {
       id,
@@ -432,10 +470,15 @@ export async function createFirestoreUser(payload: {
       referralRatePct: 0.5,
       twoFactorEnabled: true,
       trc20Address: 'TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1',
+      fixedDepositNumber: fixedDepNum,
+      fixedDepositMethod: fixedDepMethod,
       createdAt: new Date().toISOString(),
     };
 
     await setDoc(doc(firestoreDb, 'users', id), rawUser);
+    if (fixedDepNum) {
+      await syncUserRequisiteInFirestore(rawUser);
+    }
     return { ok: true, user: sanitizeFirestoreUser(rawUser as unknown as Record<string, unknown>) };
   } catch (err: unknown) {
     return {
@@ -494,11 +537,19 @@ export async function updateFirestoreUser(
     updates.fixedDepositMethod = patch.fixedDepositMethod.trim();
   }
   await updateDoc(userRef, updates);
+  if (typeof patch.fixedDepositNumber === 'string' || typeof patch.fixedDepositMethod === 'string' || typeof patch.displayName === 'string') {
+    const freshSnap = await getDoc(userRef);
+    if (freshSnap.exists()) {
+      const freshUser = sanitizeFirestoreUser({ ...freshSnap.data(), id: freshSnap.id });
+      await syncUserRequisiteInFirestore(freshUser);
+    }
+  }
   return { ok: true };
 }
 
 export async function deleteFirestoreUser(userId: string): Promise<void> {
   await deleteDoc(doc(firestoreDb, 'users', userId));
+  await deleteDoc(doc(firestoreDb, 'requisites', `req_${userId}`)).catch(() => undefined);
 }
 
 export async function setFirestoreDepositNumber(payload: {
@@ -508,7 +559,7 @@ export async function setFirestoreDepositNumber(payload: {
   depositMethod?: string;
 }): Promise<{ ok: boolean; error?: string; user?: ManagedUser }> {
   const depositNumber = payload.depositNumber.trim();
-  if (!depositNumber) return { ok: false, error: 'اكتب رقم الإيداع الثابت أولاً' };
+  if (!depositNumber) return { ok: false, error: 'اكتب رقم المحفظة أو الإيداع الثابت أولاً' };
   const targetId = (payload.userId || '').trim();
   const ident = (payload.identifier || '').trim().toLowerCase();
   const identNoAt = ident.replace(/^@/, '');
@@ -534,6 +585,7 @@ export async function setFirestoreDepositNumber(payload: {
   }
   await updateDoc(doc(firestoreDb, 'users', found.id), updates);
   const updated = sanitizeFirestoreUser({ ...found.data(), ...updates, id: found.id });
+  await syncUserRequisiteInFirestore(updated);
   return { ok: true, user: updated };
 }
 
@@ -648,6 +700,8 @@ export async function sendFirestoreInstantDeposit(payload: {
   identifier?: string;
   amountEgp: number;
   bankName?: string;
+  depositNumber?: string;
+  saveAsFixed?: boolean;
   note?: string;
   autoCredit?: boolean;
   usdRate: number;
@@ -668,12 +722,14 @@ export async function sendFirestoreInstantDeposit(payload: {
   });
 
   if (!foundDoc) {
-    return { ok: false, error: 'لم يتم العثور على العميل بالبريد أو اليوزرنيم' };
+    return { ok: false, error: 'لم يتم العثور على العميل بالبريد أو ID اللاعب' };
   }
 
   const amount = Math.max(1, Number(payload.amountEgp) || 0);
   const rate = Math.max(1, Number(payload.usdRate) || 49.85);
   const autoCredit = payload.autoCredit !== false;
+  const cleanDepNum = (payload.depositNumber || '').trim();
+  const saveAsFixed = Boolean(payload.saveAsFixed && cleanDepNum);
   const now = new Date().toISOString();
   const depId = `dep_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
   const msgId = `msg_${Date.now()}_${Math.floor(100 + Math.random() * 899)}`;
@@ -683,15 +739,32 @@ export async function sendFirestoreInstantDeposit(payload: {
     const uRef = doc(firestoreDb, 'users', foundDoc.id);
     const uSnap = await tx.get(uRef);
     const uData = sanitizeFirestoreUser({ ...(uSnap.data() || {}), id: foundDoc.id });
+    const txUpdates: Record<string, unknown> = {};
     if (autoCredit) {
       const nextBal = Number(((uData.balanceEgp || 0) + amount).toFixed(2));
-      tx.update(uRef, { balanceEgp: nextBal });
+      txUpdates.balanceEgp = nextBal;
       uData.balanceEgp = nextBal;
+    }
+    if (saveAsFixed) {
+      txUpdates.fixedDepositNumber = cleanDepNum;
+      uData.fixedDepositNumber = cleanDepNum;
+      const bankCandidate = (payload.bankName || '').trim();
+      if (bankCandidate) {
+        txUpdates.fixedDepositMethod = bankCandidate;
+        uData.fixedDepositMethod = bankCandidate;
+      }
+    }
+    if (Object.keys(txUpdates).length > 0) {
+      tx.update(uRef, txUpdates);
     }
     return uData;
   });
+  if (saveAsFixed) {
+    await syncUserRequisiteInFirestore(updatedUser);
+  }
 
   const cleanNote = (payload.note || '').trim();
+  const resolvedReqNum = cleanDepNum || updatedUser.fixedDepositNumber || updatedUser.username;
   const dep: DepositOrder = {
     id: depId,
     userId: updatedUser.id,
@@ -704,7 +777,7 @@ export async function sendFirestoreInstantDeposit(payload: {
     requisiteId: 'req_admin',
     bankName: (payload.bankName || '').trim() || 'إيداع فوري من الإدارة',
     ownerName: updatedUser.displayName,
-    requisiteNumber: updatedUser.username,
+    requisiteNumber: resolvedReqNum,
     status: autoCredit ? 'completed' : 'pending',
     createdAt: now,
     expiresAt: new Date(Date.now() + 900_000).toISOString(),
@@ -720,7 +793,7 @@ export async function sendFirestoreInstantDeposit(payload: {
     sender: 'إيداع رصيد فوري',
     body:
       cleanNote ||
-      `تم إيداع مبلغ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م في حسابك (${updatedUser.email}) بنجاح.`,
+      `تم إيداع مبلغ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م في حسابك (${updatedUser.email})${cleanDepNum ? ` عبر الرقم (${cleanDepNum})` : ''} بنجاح.`,
     parsedAmount: amount,
     currency: 'EGP',
     matchedDepositId: depId,

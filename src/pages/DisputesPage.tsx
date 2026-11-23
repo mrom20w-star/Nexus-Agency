@@ -70,7 +70,7 @@ export function DisputesPage({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/26 bg-[#280e14]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
         <div className="flex items-center gap-2.5 flex-1 min-w-[240px]">
           <div className="relative flex-1 max-w-xs">
             <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-3.5 w-3.5 text-[#a38f92]" />
@@ -107,7 +107,7 @@ export function DisputesPage({
           </div>
         ) : (
           <table className="hpay-table w-full border-collapse text-start">
-            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#e05b64]/26">
+            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#c4454b]/26">
               <tr className="text-[12px] font-medium text-[#c7b3b6]">
                 {!settings.hideRowNumbers && <th className="py-3 px-4 text-start w-12">#</th>}
                 <th className="py-3 px-4 text-start">{t(lang, 'orderId')}</th>
@@ -126,7 +126,7 @@ export function DisputesPage({
                   key={d.id}
                   onClick={() => setSelectedId(d.id)}
                   className={`cursor-pointer transition-colors ${
-                    d.id === selectedId ? 'bg-[#c4454b]/15' : 'hover:bg-[#1e1417]/75'
+                    d.id === selectedId ? 'bg-[#c4454b]/15' : 'hover:bg-[#1a1013]/75'
                   }`}
                 >
                   {!settings.hideRowNumbers && (

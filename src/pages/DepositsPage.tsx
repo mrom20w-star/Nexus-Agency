@@ -4,6 +4,7 @@ import {
   Clock,
   Copy,
   Download,
+  Lock,
   Plus,
   Search,
   SlidersHorizontal,
@@ -72,12 +73,22 @@ export function DepositsPage({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<AllowedPaymentMethod>('فودافون كاش');
+  const [selectedMethod, setSelectedMethod] = useState<AllowedPaymentMethod>(() => {
+    const candidate = currentAccount.fixedDepositMethod as AllowedPaymentMethod | undefined;
+    return candidate && ALLOWED_PAYMENT_METHODS.includes(candidate) ? candidate : 'فودافون كاش';
+  });
   const [depositAmount, setDepositAmount] = useState('1000');
   const [senderNumber, setSenderNumber] = useState('');
   const [depositNote, setDepositNote] = useState('');
   const [submittingDeposit, setSubmittingDeposit] = useState(false);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const candidate = currentAccount.fixedDepositMethod as AllowedPaymentMethod | undefined;
+    if (candidate && ALLOWED_PAYMENT_METHODS.includes(candidate)) {
+      setSelectedMethod(candidate);
+    }
+  }, [currentAccount.fixedDepositMethod]);
 
   useEffect(() => {
     if (triggerCreate) {
@@ -86,6 +97,14 @@ export function DepositsPage({
       onClearTriggerCreate?.();
     }
   }, [triggerCreate, onClearTriggerCreate]);
+
+  const hasFixedAgentNumber = Boolean((currentAccount.fixedDepositNumber || '').trim());
+  const lockedAgentMethod =
+    hasFixedAgentNumber &&
+    currentAccount.fixedDepositMethod &&
+    ALLOWED_PAYMENT_METHODS.includes(currentAccount.fixedDepositMethod as AllowedPaymentMethod)
+      ? (currentAccount.fixedDepositMethod as AllowedPaymentMethod)
+      : null;
 
   const resolvedFixedNumber = useMemo(() => {
     const userNum = (currentAccount.fixedDepositNumber || '').trim();
@@ -237,7 +256,7 @@ export function DepositsPage({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
+      <div className="hpay-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-[#c4454b]/26 bg-[#280e14]/58 backdrop-blur-md px-4 lg:px-6 py-3 shrink-0">
         <div className="flex items-center gap-2.5 flex-1 min-w-[240px]">
           <button
             type="button"
@@ -245,7 +264,7 @@ export function DepositsPage({
             className={`flex h-9 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors cursor-pointer shrink-0 ${
               statusFilter !== 'all' || minAmount || maxAmount
                 ? 'border-[#d15b62]/60 bg-[#c4454b]/18 text-[#f09599]'
-                : 'border-[#c4454b]/25 bg-[#201518]/75 text-white hover:bg-[#2a1c20]'
+                : 'border-[#c4454b]/25 bg-[#201518]/75 text-white hover:bg-[#280e14]'
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -285,7 +304,7 @@ export function DepositsPage({
           <button
             type="button"
             onClick={handleExport}
-            className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[#c4454b]/25 bg-[#201518]/75 px-3 text-[13px] font-medium text-[#c7b3b6] hover:text-white hover:bg-[#2a1c20] transition-colors cursor-pointer whitespace-nowrap"
+            className="flex h-9 items-center gap-1.5 rounded-[10px] border border-[#c4454b]/25 bg-[#201518]/75 px-3 text-[13px] font-medium text-[#c7b3b6] hover:text-white hover:bg-[#280e14] transition-colors cursor-pointer whitespace-nowrap"
           >
             <Download className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{t(lang, 'exportCsv')}</span>
@@ -319,7 +338,7 @@ export function DepositsPage({
           </div>
         ) : (
           <table className="hpay-table w-full border-collapse text-start">
-            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#e05b64]/26">
+            <thead className="sticky top-0 z-10 bg-[#311118]/82 backdrop-blur-md border-b border-[#c4454b]/26">
               <tr className="text-[12px] font-medium text-[#c7b3b6]">
                 {!settings.hideRowNumbers && <th className="py-3 px-4 text-start w-12">#</th>}
                 <th className="py-3 px-4 text-start">{t(lang, 'orderId')}</th>
@@ -352,7 +371,7 @@ export function DepositsPage({
                       setSelectedId(dep.id);
                     }}
                     className={`cursor-pointer transition-colors ${
-                      isSelected ? 'bg-[#c4454b]/15' : `${rowTint} hover:bg-[#1e1417]/75`
+                      isSelected ? 'bg-[#c4454b]/15' : `${rowTint} hover:bg-[#1a1013]/75`
                     }`}
                   >
                     {!settings.hideRowNumbers && (
@@ -474,21 +493,41 @@ export function DepositsPage({
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-[#c7b3b6] block">
-              {lang === 'ar' ? '1) اختر وسيلة واحدة فقط' : '1) Select One Payment Method'}
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[12px] font-medium text-[#c7b3b6] block">
+                {lockedAgentMethod
+                  ? lang === 'ar'
+                    ? '1) وسيلة الدفع المعيّنة من الإدارة'
+                    : '1) Payment Method (Assigned by Admin)'
+                  : lang === 'ar'
+                  ? '1) اختر وسيلة واحدة فقط'
+                  : '1) Select One Payment Method'}
+              </label>
+              {lockedAgentMethod && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-[#c4454b]/35 bg-[#c4454b]/15 px-2 py-0.5 text-[10.5px] font-semibold text-[#f3a6aa]">
+                  <Lock className="h-3 w-3" />
+                  <span>{lang === 'ar' ? 'ثابت من الإدارة' : 'Admin Locked'}</span>
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {ALLOWED_PAYMENT_METHODS.map((method) => {
-                const active = selectedMethod === method;
+                const active = (lockedAgentMethod ?? selectedMethod) === method;
+                const lockedOut = Boolean(lockedAgentMethod && lockedAgentMethod !== method);
                 return (
                   <button
                     key={method}
                     type="button"
-                    onClick={() => setSelectedMethod(method)}
-                    className={`rounded-[10px] border px-3 py-2.5 text-[13px] font-semibold transition-colors cursor-pointer ${
+                    disabled={lockedOut}
+                    onClick={() => {
+                      if (!lockedAgentMethod) setSelectedMethod(method);
+                    }}
+                    className={`rounded-[10px] border px-3 py-2.5 text-[13px] font-semibold transition-colors ${
                       active
-                        ? 'border-[#d15b62] bg-[#b83b44]/25 text-white'
-                        : 'border-[#c4454b]/22 bg-[#201518]/70 text-[#c7b3b6] hover:text-white'
+                        ? 'border-[#d15b62] bg-[#b83b44]/25 text-white cursor-default'
+                        : lockedOut
+                        ? 'border-[#c4454b]/15 bg-[#1a1013]/50 text-[#7d686b] opacity-45 cursor-not-allowed'
+                        : 'border-[#c4454b]/22 bg-[#201518]/70 text-[#c7b3b6] hover:text-white cursor-pointer'
                     }`}
                   >
                     {method}
@@ -499,10 +538,18 @@ export function DepositsPage({
           </div>
 
           <div className="rounded-[12px] border border-[#c4454b]/35 bg-[#c4454b]/14 p-4 space-y-2.5">
-            <div className="text-[12.5px] font-semibold text-[#f3a6aa]">
-              {lang === 'ar'
-                ? '2) حوّل المبلغ أولاً على رقم الإيداع الثابت:'
-                : '2) Transfer first to this fixed deposit number:'}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-[12.5px] font-semibold text-[#f3a6aa]">
+                {lang === 'ar'
+                  ? '2) حوّل المبلغ على رقم الوكيل الثابت (لا يمكن تغييره):'
+                  : '2) Transfer to this Fixed Agent Number (Immutable):'}
+              </div>
+              {hasFixedAgentNumber && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-[#c4454b]/35 bg-[#120c0e]/75 px-2 py-0.5 text-[10.5px] font-semibold text-[#f3a6aa]">
+                  <Lock className="h-3 w-3" />
+                  <span>{lang === 'ar' ? 'ثابت — من الإدارة فقط' : 'Fixed by Admin'}</span>
+                </span>
+              )}
             </div>
             {resolvedFixedNumber ? (
               <div className="flex items-center justify-between gap-2 rounded-[10px] border border-[#c4454b]/35 bg-[#120c0e]/85 px-3 py-2.5">
@@ -523,15 +570,15 @@ export function DepositsPage({
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>
                   {lang === 'ar'
-                    ? 'لم يتم تحديد رقم إيداع ثابت لحسابك من الإدارة بعد.'
-                    : 'No fixed deposit number assigned to your account yet.'}
+                    ? 'لم يتم إضافة رقم وكيل ثابت لحسابك من الإدارة بعد.'
+                    : 'No fixed agent number assigned to your account yet.'}
                 </span>
               </div>
             )}
             <div className="text-[11.5px] text-[#f3a6aa]/85">
               {lang === 'ar'
-                ? 'بعد التحويل اضغط إرسال، وسيدخل الطلب في حالة الانتظار لحين مراجعة وتأكيد الإدارة.'
-                : 'After transferring, submit the request and wait for approval.'}
+                ? 'هذا الرقم ثابت ومربوط بحسابك من الإدارة فقط ولا يمكنك تعديله. بعد التحويل اضغط إرسال لحين مراجعة الإدارة.'
+                : 'This number is fixed by Admin only and cannot be altered. After transferring, submit for Admin review.'}
             </div>
           </div>
 
@@ -661,7 +708,7 @@ export function DepositsPage({
                 <button
                   type="button"
                   onClick={() => copyText(selected.requisiteNumber)}
-                  className="flex items-center gap-1.5 rounded-lg border border-[#c4454b]/28 bg-[#281b1e]/80 px-2.5 py-1 text-[12.5px] font-mono-num text-white hover:bg-[#322125] cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-lg border border-[#c4454b]/28 bg-[#280e14]/80 px-2.5 py-1 text-[12.5px] font-mono-num text-white hover:bg-[#311118] cursor-pointer"
                 >
                   <span>{selected.requisiteNumber}</span>
                   <Copy className="h-3 w-3 text-[#c7b3b6]" />

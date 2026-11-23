@@ -10,7 +10,7 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   info: 'border-[#c4454b]/40 bg-[#c4454b]/15 text-[#f09599]',
   warning: 'border-[#f4c20d]/35 bg-[#f4c20d]/10 text-[#f4c20d]',
   accent: 'border-[#c4454b]/45 bg-[#c4454b]/18 text-[#f29b9f]',
-  neutral: 'border-[#c4454b]/20 bg-[#23181a]/75 text-[#c7b3b6]',
+  neutral: 'border-[#c4454b]/20 bg-[#201518]/75 text-[#c7b3b6]',
 };
 
 export function statusToTone(status: string): BadgeTone {

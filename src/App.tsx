@@ -12,8 +12,6 @@ import {
   claimFirestoreWithdrawal,
   createFirestoreAgentDeposit,
   createFirestoreAgentWithdrawal,
-  createFirestoreRequisite,
-  deleteFirestoreRequisite,
   fetchAgentSliceFromFirestore,
   fetchPublicConfigFromFirestore,
   loginWithFirestore,
@@ -26,7 +24,6 @@ import {
   subscribeAgentInFirestore,
   updateFirestoreAgentFields,
   updateFirestoreAgentSettings,
-  updateFirestoreRequisite,
 } from './firebase/client';
 import { DepositsPage } from './pages/DepositsPage';
 import { DisputesPage } from './pages/DisputesPage';
@@ -212,7 +209,6 @@ export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [triggerCreateRequisite, setTriggerCreateRequisite] = useState(false);
   const [triggerCreateTopUp, setTriggerCreateTopUp] = useState(false);
   const [triggerCreateDeposit, setTriggerCreateDeposit] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -624,16 +620,11 @@ export default function App() {
             if (!r.ok) return r;
           } else if (url === '/api/agent/messages/simulate' && method === 'POST') {
             await simulateFirestoreSms(uid);
-          } else if (url === '/api/agent/requisites' && method === 'POST') {
-            const r = await createFirestoreRequisite(uid, payload);
-            if (!r.ok) return r;
-          } else if (url.startsWith('/api/agent/requisites/') && method === 'PATCH') {
-            const reqId = decodeURIComponent(url.replace('/api/agent/requisites/', ''));
-            const r = await updateFirestoreRequisite(uid, reqId, payload);
-            if (!r.ok) return r;
-          } else if (url.startsWith('/api/agent/requisites/') && method === 'DELETE') {
-            const reqId = decodeURIComponent(url.replace('/api/agent/requisites/', ''));
-            await deleteFirestoreRequisite(uid, reqId);
+          } else if (url.startsWith('/api/agent/requisites')) {
+            return {
+              ok: false,
+              error: 'إضافة وتعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
+            };
           }
 
           await refreshFirestoreSlice();
@@ -912,15 +903,6 @@ export default function App() {
               requisites={agentState.requisites}
               currentAccount={currentAccount}
               settings={activeSettings}
-              triggerCreate={triggerCreateRequisite}
-              onClearTriggerCreate={() => setTriggerCreateRequisite(false)}
-              onCreate={async (data) => agentMutate('/api/agent/requisites', 'POST', data)}
-              onUpdate={async (id, data) =>
-                agentMutate(`/api/agent/requisites/${encodeURIComponent(id)}`, 'PATCH', data)
-              }
-              onDelete={async (id) => {
-                await agentMutate(`/api/agent/requisites/${encodeURIComponent(id)}`, 'DELETE');
-              }}
               onNotify={notify}
             />
           )}
@@ -997,7 +979,6 @@ export default function App() {
         onClose={() => setCommandOpen(false)}
         onExecute={(route, action) => {
           navigateAgentRoute(route);
-          if (action === 'create_requisite') setTriggerCreateRequisite(true);
           if (action === 'create_deposit') setTriggerCreateDeposit(true);
           if (action === 'create_topup') setTriggerCreateTopUp(true);
         }}

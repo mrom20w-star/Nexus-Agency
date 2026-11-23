@@ -381,6 +381,27 @@ function buildAgentSlice(db: StoredDb, uid: string) {
   if (!target) return null;
   const account = buildAccountForUser(target, db.config);
   const accId = account.account_id;
+  const ownReqs = db.requisites.filter((r) => r.userId === uid || r.accountId === accId);
+  const resolvedReqs =
+    ownReqs.length === 0 && target.fixedDepositNumber?.trim()
+      ? [
+          {
+            id: `req_${target.id}`,
+            userId: target.id,
+            accountId: accId,
+            bankName: target.fixedDepositMethod?.trim() || 'فودافون كاش',
+            ownerName: target.displayName,
+            accountNumber: target.fixedDepositNumber.trim(),
+            type: (target.fixedDepositMethod === 'باينانس' ? 'instapay' : 'wallet') as 'wallet' | 'instapay',
+            minOrder: 100,
+            maxOrder: 30000,
+            dailyLimit: 150000,
+            dailyUsed: 0,
+            bidRate: Number(target.depositFeePct ?? 3.0),
+            active: true,
+          },
+        ]
+      : ownReqs;
   return {
     config: buildPublicConfig(db),
     users: [],
@@ -389,7 +410,7 @@ function buildAgentSlice(db: StoredDb, uid: string) {
     profile: buildProfileForUser(target),
     currentAccountId: accId,
     accounts: [account],
-    requisites: db.requisites.filter((r) => r.userId === uid || r.accountId === accId),
+    requisites: resolvedReqs,
     deposits: db.deposits.filter((d) => d.userId === uid || d.accountId === accId),
     disputes: db.disputes.filter((d) => d.userId === uid || d.accountId === accId),
     withdrawals: db.withdrawals.filter((w) => w.userId === uid || w.accountId === accId),
@@ -753,6 +774,29 @@ app.get('/api/admin/state', requireAdmin, async (_req, res) => {
   res.json({ ok: true, storageMode: getStorageMode(), state: buildAdminState(db) });
 });
 
+function syncDbUserRequisite(db: StoredDb, user: StoredUser): void {
+  const reqId = `req_${user.id}`;
+  db.requisites = db.requisites.filter((r) => r.userId !== user.id);
+  const cleanNum = (user.fixedDepositNumber || '').trim();
+  if (!cleanNum) return;
+  const methodName = (user.fixedDepositMethod || '').trim() || 'فودافون كاش';
+  db.requisites.unshift({
+    id: reqId,
+    userId: user.id,
+    accountId: `acc_${user.id}`,
+    bankName: methodName,
+    ownerName: user.displayName,
+    accountNumber: cleanNum,
+    type: methodName === 'باينانس' ? 'instapay' : 'wallet',
+    minOrder: 100,
+    maxOrder: 30000,
+    dailyLimit: 150000,
+    dailyUsed: 0,
+    bidRate: Number(user.depositFeePct ?? 3.0),
+    active: true,
+  });
+}
+
 app.post('/api/admin/users', requireAdmin, async (req, res) => {
   const db = await loadDb();
   const email = String(req.body?.email || '').trim();
@@ -768,6 +812,10 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
   }
   const prefix = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'agent';
   const playerId = generatePlayerId(db.users);
+  const fixedDepositNumber = String(req.body?.fixedDepositNumber || '').trim();
+  const fixedDepositMethod = fixedDepositNumber
+    ? String(req.body?.fixedDepositMethod || '').trim() || 'فودافون كاش'
+    : '';
   const newUser: StoredUser = {
     id: `usr_${Date.now()}_${crypto.randomInt(100, 999)}`,
     playerId,
@@ -789,9 +837,14 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
     referralRatePct: 0.5,
     twoFactorEnabled: true,
     trc20Address: 'TY9xK8mPq7VwRz4nLp3JdXs2kF9aBc7eW1',
+    fixedDepositNumber,
+    fixedDepositMethod,
     createdAt: new Date().toISOString(),
   };
   db.users.unshift(newUser);
+  if (fixedDepositNumber) {
+    syncDbUserRequisite(db, newUser);
+  }
   await saveDb(db);
   res.json({ ok: true, user: sanitizeUser(newUser), state: buildAdminState(db) });
 });
@@ -831,6 +884,9 @@ app.patch('/api/admin/users/:userId', requireAdmin, async (req, res) => {
   if (typeof patch.fixedDepositNumber === 'string') user.fixedDepositNumber = patch.fixedDepositNumber.trim();
   if (typeof patch.fixedDepositMethod === 'string') user.fixedDepositMethod = patch.fixedDepositMethod.trim();
   db.users[idx] = user;
+  if (typeof patch.fixedDepositNumber === 'string' || typeof patch.fixedDepositMethod === 'string' || typeof patch.displayName === 'string') {
+    syncDbUserRequisite(db, user);
+  }
   await saveDb(db);
   res.json({ ok: true, user: sanitizeUser(user), state: buildAdminState(db) });
 });
@@ -843,7 +899,7 @@ app.post('/api/admin/deposit-number', requireAdmin, async (req, res) => {
   const depositNumber = String(req.body?.depositNumber || '').trim();
   const depositMethod = String(req.body?.depositMethod || '').trim();
   if (!depositNumber) {
-    res.status(400).json({ ok: false, error: 'اكتب رقم الإيداع الثابت أولاً' });
+    res.status(400).json({ ok: false, error: 'اكتب رقم المحفظة أو الإيداع الثابت أولاً' });
     return;
   }
   const idx = db.users.findIndex((u) => {
@@ -861,6 +917,7 @@ app.post('/api/admin/deposit-number', requireAdmin, async (req, res) => {
   }
   db.users[idx].fixedDepositNumber = depositNumber;
   if (depositMethod) db.users[idx].fixedDepositMethod = depositMethod;
+  syncDbUserRequisite(db, db.users[idx]);
   await saveDb(db);
   res.json({ ok: true, user: sanitizeUser(db.users[idx]), state: buildAdminState(db) });
 });
@@ -868,6 +925,7 @@ app.post('/api/admin/deposit-number', requireAdmin, async (req, res) => {
 app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
   const db = await loadDb();
   db.users = db.users.filter((u) => u.id !== req.params.userId);
+  db.requisites = db.requisites.filter((r) => r.userId !== req.params.userId);
   await saveDb(db);
   res.json({ ok: true, state: buildAdminState(db) });
 });
@@ -980,13 +1038,23 @@ app.post('/api/admin/deposits', requireAdmin, async (req, res) => {
   const amountEgp = Math.max(1, Number(req.body?.amountEgp) || 0);
   const autoCredit = req.body?.autoCredit !== false;
   const bankName = String(req.body?.bankName || '').trim() || 'إيداع فوري من الإدارة';
+  const cleanDepNum = String(req.body?.depositNumber || '').trim();
+  const saveAsFixed = Boolean(req.body?.saveAsFixed && cleanDepNum);
   const note = String(req.body?.note || '').trim();
   const rate = Math.max(1, Number(db.config.usdRate) || 49.85);
   const nowIso = new Date().toISOString();
   if (autoCredit) {
     target.balanceEgp = Math.round((Number(target.balanceEgp || 0) + amountEgp) * 100) / 100;
-    db.users[idx] = target;
   }
+  if (saveAsFixed) {
+    target.fixedDepositNumber = cleanDepNum;
+    if (ALLOWED_METHODS.has(bankName)) {
+      target.fixedDepositMethod = bankName;
+    }
+    syncDbUserRequisite(db, target);
+  }
+  db.users[idx] = target;
+  const resolvedReqNum = cleanDepNum || target.fixedDepositNumber || target.username;
   const depId = `dep_${Date.now()}_${crypto.randomInt(100, 999)}`;
   const orderId = `EG-${crypto.randomInt(884200, 984199)}`;
   db.deposits.unshift({
@@ -1001,7 +1069,7 @@ app.post('/api/admin/deposits', requireAdmin, async (req, res) => {
     requisiteId: 'req_admin_direct',
     bankName,
     ownerName: target.displayName,
-    requisiteNumber: target.username,
+    requisiteNumber: resolvedReqNum,
     status: autoCredit ? 'completed' : 'pending',
     createdAt: nowIso,
     expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
@@ -1016,7 +1084,7 @@ app.post('/api/admin/deposits', requireAdmin, async (req, res) => {
     sender: 'إيداع رصيد فوري',
     body:
       note ||
-      `تم إيداع مبلغ ${amountEgp.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م في حسابك (${target.email}) بنجاح.`,
+      `تم إيداع مبلغ ${amountEgp.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م في حسابك (${target.email})${cleanDepNum ? ` عبر الرقم (${cleanDepNum})` : ''} بنجاح.`,
     parsedAmount: amountEgp,
     currency: 'EGP',
     matchedDepositId: depId,
@@ -1216,12 +1284,18 @@ app.post('/api/agent/deposits', requireAgent, async (req, res) => {
     'أورنج كاش': db.config.depositMethodNumbers?.orange,
     'باينانس': db.config.depositMethodNumbers?.binance,
   };
+  const fixedAgentNumber = (user.fixedDepositNumber || '').trim();
+  const fixedAgentMethod = (user.fixedDepositMethod || '').trim();
+  const resolvedMethod =
+    fixedAgentNumber && fixedAgentMethod && ALLOWED_METHODS.has(fixedAgentMethod)
+      ? fixedAgentMethod
+      : paymentMethod;
   const assignedDepositNumber =
-    (user.fixedDepositNumber || '').trim() ||
-    (methodMap[paymentMethod] || '').trim() ||
+    fixedAgentNumber ||
+    (methodMap[resolvedMethod] || '').trim() ||
     (db.config.defaultDepositNumber || '').trim();
   if (!assignedDepositNumber) {
-    res.status(400).json({ ok: false, error: 'لم يتم تعيين رقم إيداع ثابت من الإدارة بعد' });
+    res.status(400).json({ ok: false, error: 'لم يتم إضافة رقم وكيل ثابت من لوحة الإدارة بعد' });
     return;
   }
   const rate = Math.max(1, Number(db.config.usdRate) || 49.85);
@@ -1235,7 +1309,7 @@ app.post('/api/agent/deposits', requireAgent, async (req, res) => {
     incomeUsdt: Math.round(amountLocal * ((user.depositFeePct ?? 3) / 100) * 100) / 100,
     rate,
     requisiteId: 'fixed_deposit',
-    bankName: paymentMethod,
+    bankName: resolvedMethod,
     ownerName: user.displayName,
     requisiteNumber: assignedDepositNumber,
     status: 'pending',
@@ -1495,58 +1569,25 @@ app.post('/api/agent/withdrawals/:id/action', requireAgent, async (req, res) => 
   res.json({ ok: true, slice: buildAgentSlice(db, uid) });
 });
 
-app.post('/api/agent/requisites', requireAgent, async (req, res) => {
-  const db = await loadDb();
-  const uid = (req as Request & { agentUserId: string }).agentUserId;
-  const b = req.body ?? {};
-  const bankName = String(b.bankName || '').trim();
-  if (!ALLOWED_METHODS.has(bankName)) {
-    res.status(400).json({ ok: false, error: 'اختر وسيلة دفع صالحة' });
-    return;
-  }
-  if (db.requisites.some((r) => r.userId === uid)) {
-    res.status(400).json({ ok: false, error: 'يُسمح بوسيلة دفع واحدة فقط لكل حساب' });
-    return;
-  }
-  db.requisites.unshift({
-    id: `req_${Date.now()}_${crypto.randomInt(100, 999)}`,
-    userId: uid,
-    accountId: `acc_${uid}`,
-    bankName,
-    ownerName: String(b.ownerName || '').trim(),
-    accountNumber: String(b.accountNumber || '').trim(),
-    type: bankName === 'باينانس' ? 'instapay' : 'wallet',
-    minOrder: Math.max(1, Number(b.minOrder) || 100),
-    maxOrder: Math.max(100, Number(b.maxOrder) || 30000),
-    dailyLimit: Math.max(100, Number(b.dailyLimit) || 100000),
-    dailyUsed: 0,
-    bidRate: Number(b.bidRate) || 3.0,
-    active: b.active !== false,
+app.post('/api/agent/requisites', requireAgent, (_req, res) => {
+  res.status(403).json({
+    ok: false,
+    error: 'إضافة وتعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
   });
-  await saveDb(db);
-  res.json({ ok: true, slice: buildAgentSlice(db, uid) });
 });
 
-app.patch('/api/agent/requisites/:id', requireAgent, async (req, res) => {
-  const db = await loadDb();
-  const uid = (req as Request & { agentUserId: string }).agentUserId;
-  const idx = db.requisites.findIndex((r) => r.id === req.params.id && r.userId === uid);
-  if (idx < 0) {
-    res.status(404).json({ ok: false, error: 'وسيلة الدفع غير موجودة' });
-    return;
-  }
-  const patch = req.body ?? {};
-  db.requisites[idx] = { ...db.requisites[idx], ...patch };
-  await saveDb(db);
-  res.json({ ok: true, slice: buildAgentSlice(db, uid) });
+app.patch('/api/agent/requisites/:id', requireAgent, (_req, res) => {
+  res.status(403).json({
+    ok: false,
+    error: 'إضافة وتعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
+  });
 });
 
-app.delete('/api/agent/requisites/:id', requireAgent, async (req, res) => {
-  const db = await loadDb();
-  const uid = (req as Request & { agentUserId: string }).agentUserId;
-  db.requisites = db.requisites.filter((r) => !(r.id === req.params.id && r.userId === uid));
-  await saveDb(db);
-  res.json({ ok: true, slice: buildAgentSlice(db, uid) });
+app.delete('/api/agent/requisites/:id', requireAgent, (_req, res) => {
+  res.status(403).json({
+    ok: false,
+    error: 'حذف أو تعديل رقم المحفظة ووسيلة الدفع يتم من لوحة تحكم الإدارة فقط',
+  });
 });
 
 app.post('/api/agent/messages/simulate', requireAgent, async (req, res) => {

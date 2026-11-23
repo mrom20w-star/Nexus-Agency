@@ -64,7 +64,7 @@ export function CommandPalette({
         group: t(lang, 'withdrawalsGroup'),
         route: '/withdrawals',
         keywords: ['withdrawals', 'payout', 'سحب', 'السحوبات'],
-        icon: <ArrowUpRight className="h-4 w-4 text-[#e87d82]" />,
+        icon: <ArrowUpRight className="h-4 w-4 text-[#f09599]" />,
       },
       {
         id: 'nav-my-withdrawals',
@@ -72,7 +72,7 @@ export function CommandPalette({
         group: t(lang, 'withdrawalsGroup'),
         route: '/withdrawals/my',
         keywords: ['my withdrawals', 'سحوباتي', 'قيد التنفيذ'],
-        icon: <ArrowUpRight className="h-4 w-4 text-[#e87d82]" />,
+        icon: <ArrowUpRight className="h-4 w-4 text-[#f09599]" />,
       },
       {
         id: 'nav-stats',
@@ -88,7 +88,7 @@ export function CommandPalette({
         group: t(lang, 'navigation'),
         route: '/requisite',
         keywords: ['requisite', 'cards', 'bank', 'وسائل الدفع', 'بطاقات', 'فودافون'],
-        icon: <CreditCard className="h-4 w-4 text-[#e87d82]" />,
+        icon: <CreditCard className="h-4 w-4 text-[#f09599]" />,
       },
       {
         id: 'nav-messages',
@@ -113,15 +113,6 @@ export function CommandPalette({
         route: '/referrals',
         keywords: ['referrals', 'partners', 'احالات', 'شركاء'],
         icon: <Users className="h-4 w-4 text-[#c7b3b6]" />,
-      },
-      {
-        id: 'act-create-req',
-        title: t(lang, 'createRequisite'),
-        group: lang === 'ar' ? 'إجراءات سريعة' : 'Quick Actions',
-        route: '/requisite',
-        action: 'create_requisite',
-        keywords: ['create requisite', 'add card', 'اضافة وسيلة', 'بطاقة جديدة'],
-        icon: <Plus className="h-4 w-4 text-[#e87d82]" />,
       },
       {
         id: 'act-create-topup',
@@ -188,9 +179,9 @@ export function CommandPalette({
         role="dialog"
         aria-label={t(lang, 'searchPages')}
         onKeyDown={handleKeyDown}
-        className="relative z-10 w-full max-w-[560px] overflow-hidden rounded-[14px] border border-[#e05b64]/35 bg-[#260d13]/78 backdrop-blur-2xl shadow-2xl"
+        className="relative z-10 w-full max-w-[560px] overflow-hidden rounded-[14px] border border-[#c4454b]/35 bg-[#241317]/78 backdrop-blur-2xl shadow-2xl"
       >
-        <div className="flex items-center gap-2.5 border-b border-[#e05b64]/24 px-4 py-3">
+        <div className="flex items-center gap-2.5 border-b border-[#c4454b]/24 px-4 py-3">
           <Search className="h-4 w-4 text-[#737373] shrink-0" />
           <input
             ref={inputRef}
@@ -206,7 +197,7 @@ export function CommandPalette({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-[6px] border border-[#e05b64]/30 px-1.5 py-0.5 text-[11px] font-medium text-[#d4b6ba] hover:text-white cursor-pointer"
+            className="shrink-0 rounded-[6px] border border-[#c4454b]/30 px-1.5 py-0.5 text-[11px] font-medium text-[#c7b3b6] hover:text-white cursor-pointer"
           >
             ESC
           </button>
@@ -236,7 +227,7 @@ export function CommandPalette({
                     <span className="shrink-0">{item.icon}</span>
                     <span className="text-[13.5px] font-medium text-white truncate">{item.title}</span>
                   </span>
-                  <span className="shrink-0 text-[11.5px] text-[#cfaeb3]">
+                  <span className="shrink-0 text-[11.5px] text-[#c7b3b6]">
                     {isCurrent ? t(lang, 'currentPage') : item.group}
                   </span>
                 </button>
@@ -245,7 +236,7 @@ export function CommandPalette({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-[#e05b64]/24 px-4 py-2 text-[11.5px] text-[#cfaeb3]">
+        <div className="flex items-center justify-between border-t border-[#c4454b]/24 px-4 py-2 text-[11.5px] text-[#c7b3b6]">
           <span>↑↓ {t(lang, 'toNavigate')}</span>
           <span>↵ {t(lang, 'toOpen')}</span>
         </div>

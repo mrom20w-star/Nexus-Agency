@@ -24,7 +24,7 @@ export function BottomBar({
   const safeTotal = Math.max(1, totalPages);
 
   return (
-    <div className="shrink-0 border-t border-[#e05b64]/26 bg-[#2a0f15]/58 backdrop-blur-xl px-4 lg:px-5 py-2.5 flex items-center justify-between gap-3">
+    <div className="shrink-0 border-t border-[#c4454b]/26 bg-[#280e14]/58 backdrop-blur-xl px-4 lg:px-5 py-2.5 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -40,7 +40,7 @@ export function BottomBar({
             type="button"
             onClick={onToggleExpand}
             aria-label={lang === 'ar' ? 'تبديل العرض' : 'Toggle density'}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#e05b64]/28 bg-[#36141c]/65 text-[#e2c7cb] hover:text-white hover:bg-[#441923]/75 transition-colors cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#c4454b]/28 bg-[#311118]/65 text-[#c7b3b6] hover:text-white hover:bg-[#441923]/75 transition-colors cursor-pointer"
           >
             {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
@@ -53,12 +53,12 @@ export function BottomBar({
           disabled={page <= 1}
           onClick={() => onPageChange(Math.max(1, page - 1))}
           aria-label="Previous page"
-          className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#a38f92] hover:bg-[#24181b] hover:text-white disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#a38f92] hover:bg-[#241317] hover:text-white disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
         >
           {lang === 'ar' ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
 
-        <span className="flex h-8 min-w-8 items-center justify-center rounded-[8px] border border-[#c4454b]/25 bg-[#24181b]/80 px-2.5 text-[13px] font-medium font-mono-num text-white">
+        <span className="flex h-8 min-w-8 items-center justify-center rounded-[8px] border border-[#c4454b]/25 bg-[#241317]/80 px-2.5 text-[13px] font-medium font-mono-num text-white">
           {page}
         </span>
 
@@ -67,7 +67,7 @@ export function BottomBar({
           disabled={page >= safeTotal}
           onClick={() => onPageChange(Math.min(safeTotal, page + 1))}
           aria-label="Next page"
-          className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#a38f92] hover:bg-[#24181b] hover:text-white disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[#a38f92] hover:bg-[#241317] hover:text-white disabled:opacity-35 disabled:pointer-events-none cursor-pointer"
         >
           {lang === 'ar' ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>

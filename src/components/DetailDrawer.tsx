@@ -97,15 +97,15 @@ export function DetailDrawer({
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside className="fixed z-50 lg:z-35 top-0 lg:top-[3.75rem] end-0 w-full lg:w-[475px] h-full lg:h-[calc(100vh-3.75rem)] bg-[#240c11]/75 backdrop-blur-2xl border-s border-[#e05b64]/28 flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between gap-3 px-5 h-[3.75rem] border-b border-[#e05b64]/24 shrink-0">
+      <aside className="fixed z-50 lg:z-35 top-0 lg:top-[3.75rem] end-0 w-full lg:w-[475px] h-full lg:h-[calc(100vh-3.75rem)] bg-[#241317]/75 backdrop-blur-2xl border-s border-[#c4454b]/28 flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between gap-3 px-5 h-[3.75rem] border-b border-[#c4454b]/24 shrink-0">
           <div className="flex min-w-0 items-center gap-2">
             {canBack && onBack && (
               <button
                 type="button"
                 onClick={onBack}
                 title={t(lang, 'back')}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#24181b]/80 text-[#d8c7c9] hover:text-white cursor-pointer"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#c4454b]/25 bg-[#241317]/80 text-[#c7b3b6] hover:text-white cursor-pointer"
               >
                 <ChevronLeft className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
               </button>
@@ -127,7 +127,7 @@ export function DetailDrawer({
               className={`flex h-8 w-8 items-center justify-center rounded-[6px] border transition-colors cursor-pointer ${
                 pinned
                   ? 'border-[#c4454b]/45 bg-[#c4454b]/18 text-[#f09599]'
-                  : 'border-[#c4454b]/25 bg-[#24181b]/80 text-[#c7b3b6] hover:text-white'
+                  : 'border-[#c4454b]/25 bg-[#241317]/80 text-[#c7b3b6] hover:text-white'
               }`}
             >
               <Pin className="h-3.5 w-3.5" />
@@ -137,7 +137,7 @@ export function DetailDrawer({
                 type="button"
                 onClick={handleCopy}
                 title={t(lang, 'copy')}
-                className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#c4454b]/25 bg-[#24181b]/80 text-[#c7b3b6] hover:text-white transition-colors cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#c4454b]/25 bg-[#241317]/80 text-[#c7b3b6] hover:text-white transition-colors cursor-pointer"
               >
                 <Copy className="h-3.5 w-3.5" />
               </button>
@@ -147,7 +147,7 @@ export function DetailDrawer({
               onClick={onClose}
               title={t(lang, 'close')}
               aria-label={t(lang, 'close')}
-              className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#c4454b]/25 bg-[#24181b]/80 text-[#c7b3b6] hover:text-white transition-colors cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#c4454b]/25 bg-[#241317]/80 text-[#c7b3b6] hover:text-white transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -157,7 +157,7 @@ export function DetailDrawer({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 scrollbar-dark">{children}</div>
 
         {(inlineConfirm || actions.length > 0) && (
-          <div className="shrink-0 border-t border-[#e05b64]/24 bg-[#240c11]/70 px-5 py-4 flex flex-col gap-2">
+          <div className="shrink-0 border-t border-[#c4454b]/24 bg-[#241317]/70 px-5 py-4 flex flex-col gap-2">
             {inlineConfirm ? (
               <div
                 className={`flex flex-col gap-2.5 rounded-[10px] border p-3 ${
@@ -189,7 +189,7 @@ export function DetailDrawer({
                     type="button"
                     disabled={busy}
                     onClick={() => setInlineConfirm(null)}
-                    className="flex-1 rounded-[10px] border border-[#c4454b]/25 bg-[#24181b]/80 py-2.5 text-[13.5px] font-medium text-white hover:bg-[#2c1c20] cursor-pointer"
+                    className="flex-1 rounded-[10px] border border-[#c4454b]/25 bg-[#241317]/80 py-2.5 text-[13.5px] font-medium text-white hover:bg-[#2c1016] cursor-pointer"
                   >
                     {t(lang, 'cancel')}
                   </button>
@@ -218,7 +218,7 @@ export function DetailDrawer({
                     act.tone === 'danger'
                       ? 'bg-[#c93b47]/90 text-white hover:bg-[#d64854]'
                       : act.tone === 'secondary'
-                      ? 'border border-[#c4454b]/25 bg-[#24181b]/80 text-white hover:bg-[#2c1c20]'
+                      ? 'border border-[#c4454b]/25 bg-[#241317]/80 text-white hover:bg-[#2c1016]'
                       : 'bg-[#b83b44]/85 hover:bg-[#c94a53]/90 border border-[#f29b9f]/25 text-white backdrop-blur-md'
                   }`}
                 >

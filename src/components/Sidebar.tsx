@@ -84,8 +84,8 @@ export function Sidebar({
   const isCollapsedDesktop = collapsed;
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-[#2a0f15]/58 backdrop-blur-xl border-e border-[#e05b64]/28 select-none">
-      <div className="flex items-center justify-between px-4 h-[3.75rem] border-b border-[#e05b64]/24 lg:hidden shrink-0">
+    <div className="flex h-full flex-col bg-[#280e14]/58 backdrop-blur-xl border-e border-[#c4454b]/28 select-none">
+      <div className="flex items-center justify-between px-4 h-[3.75rem] border-b border-[#c4454b]/24 lg:hidden shrink-0">
         <HostapayLogo countryCode={currentAccount.countryCode} platformName={platformName} />
         <div className="flex items-center gap-2">
           <button
@@ -95,7 +95,7 @@ export function Sidebar({
               onOpenSettings();
             }}
             aria-label={t(lang, 'settingsTitle')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e05b64]/28 bg-[#38141c]/65 text-[#e6c9ce] hover:text-white cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c4454b]/28 bg-[#311118]/65 text-[#c7b3b6] hover:text-white cursor-pointer"
           >
             <Settings className="h-4 w-4" />
           </button>
@@ -103,18 +103,18 @@ export function Sidebar({
             type="button"
             onClick={onCloseMobile}
             aria-label={t(lang, 'close')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e05b64]/28 bg-[#38141c]/65 text-[#e6c9ce] hover:text-white cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#c4454b]/28 bg-[#311118]/65 text-[#c7b3b6] hover:text-white cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className={`shrink-0 ${isCollapsedDesktop ? 'lg:px-2.5 px-4' : 'px-4'} py-3 space-y-2.5 border-b border-[#e05b64]/24`}>
+      <div className={`shrink-0 ${isCollapsedDesktop ? 'lg:px-2.5 px-4' : 'px-4'} py-3 space-y-2.5 border-b border-[#c4454b]/24`}>
         {!isCollapsedDesktop ? (
           <>
-            <div className="flex items-center justify-between rounded-[12px] border border-[#e05b64]/26 bg-[#341219]/60 px-3.5 py-2.5">
-              <div className="text-[13.5px] font-medium text-[#d6c5c7]">
+            <div className="flex items-center justify-between rounded-[12px] border border-[#c4454b]/26 bg-[#311118]/60 px-3.5 py-2.5">
+              <div className="text-[13.5px] font-medium text-[#c7b3b6]">
                 {t(lang, 'tradeStatus')}:{' '}
                 <span className="text-[#f09599] font-semibold">
                   {currentAccount.canTrade
@@ -133,7 +133,7 @@ export function Sidebar({
                 aria-label={t(lang, 'tradeStatus')}
                 onClick={() => onToggleTradeStatus(!currentAccount.canTrade)}
                 className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-                  currentAccount.canTrade ? 'bg-[#b83b44]' : 'bg-[#35262a]'
+                  currentAccount.canTrade ? 'bg-[#b83b44]' : 'bg-[#311118]'
                 }`}
               >
                 <span
@@ -201,10 +201,10 @@ export function Sidebar({
               className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-[#c4454b]/22 bg-[#201518]/70 px-3 py-2 text-[13px] text-[#c7b3b6] hover:border-[#c4454b]/45 hover:text-white transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-2 truncate">
-                <Search className="h-3.5 w-3.5 shrink-0 text-[#e87d82]" />
+                <Search className="h-3.5 w-3.5 shrink-0 text-[#f09599]" />
                 <span className="truncate">{t(lang, 'searchPages')}</span>
               </span>
-              <span className="shrink-0 rounded-[5px] border border-[#e05b64]/28 bg-[#341219]/75 px-1.5 py-0.5 text-[10.5px] font-mono-num text-[#e2c7cb]">
+              <span className="shrink-0 rounded-[5px] border border-[#c4454b]/28 bg-[#311118]/75 px-1.5 py-0.5 text-[10.5px] font-mono-num text-[#c7b3b6]">
                 Ctrl K
               </span>
             </button>
@@ -230,7 +230,7 @@ export function Sidebar({
             className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-[14px] font-medium transition-colors cursor-pointer ${
               currentRoute.startsWith('/deposits')
                 ? 'bg-[#b83b44]/22 text-white border border-[#c4454b]/40'
-                : 'text-[#c7b3b6] hover:bg-[#23181a]/75 hover:text-white border border-transparent'
+                : 'text-[#c7b3b6] hover:bg-[#201518]/75 hover:text-white border border-transparent'
             } ${isCollapsedDesktop ? 'lg:justify-center' : ''}`}
           >
             <span className="flex items-center gap-3">
@@ -271,7 +271,7 @@ export function Sidebar({
             className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-[14px] font-medium transition-colors cursor-pointer ${
               currentRoute.startsWith('/withdrawals')
                 ? 'bg-[#b83b44]/22 text-white border border-[#c4454b]/40'
-                : 'text-[#c7b3b6] hover:bg-[#23181a]/75 hover:text-white border border-transparent'
+                : 'text-[#c7b3b6] hover:bg-[#201518]/75 hover:text-white border border-transparent'
             } ${isCollapsedDesktop ? 'lg:justify-center' : ''}`}
           >
             <span className="flex items-center gap-3">
@@ -348,7 +348,7 @@ export function Sidebar({
 
       <div className="relative shrink-0 border-t border-[#c4454b]/20 p-3 space-y-2">
         {accountMenuOpen && !isCollapsedDesktop && (
-          <div className="absolute bottom-[calc(100%+6px)] inset-x-3 z-20 rounded-[12px] border border-[#c4454b]/28 bg-[#1a1114]/95 backdrop-blur-xl p-1.5 shadow-2xl space-y-1">
+          <div className="absolute bottom-[calc(100%+6px)] inset-x-3 z-20 rounded-[12px] border border-[#c4454b]/28 bg-[#1a1013]/95 backdrop-blur-xl p-1.5 shadow-2xl space-y-1">
             {accounts.map((acc) => (
               <button
                 key={acc.account_id}
@@ -360,7 +360,7 @@ export function Sidebar({
                 className={`flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-start text-[12.5px] transition-colors cursor-pointer ${
                   acc.account_id === currentAccount.account_id
                     ? 'bg-[#b83b44]/25 text-white font-semibold border border-[#c4454b]/35'
-                    : 'text-[#c7b3b6] hover:bg-[#24191c] hover:text-white'
+                    : 'text-[#c7b3b6] hover:bg-[#241317] hover:text-white'
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -408,7 +408,7 @@ export function Sidebar({
               className="flex flex-1 min-w-0 items-center justify-between gap-2 rounded-[12px] border border-[#c4454b]/22 bg-[#201518]/70 px-3 py-2.5 hover:border-[#c4454b]/45 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-[#2a1c20] border border-[#c4454b]/25">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-[#280e14] border border-[#c4454b]/25">
                   <CountryFlagBadge code={currentAccount.countryCode} />
                 </span>
                 <div className="min-w-0 text-start">
@@ -494,7 +494,7 @@ function NavLeaf({
       className={`flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-[13px] transition-colors cursor-pointer ${
         active
           ? 'bg-[#b83b44]/20 text-white font-semibold border border-[#c4454b]/30'
-          : 'text-[#c7b3b6] hover:bg-[#23181a]/75 hover:text-white border border-transparent'
+          : 'text-[#c7b3b6] hover:bg-[#201518]/75 hover:text-white border border-transparent'
       }`}
     >
       <span className="truncate">{label}</span>
@@ -538,7 +538,7 @@ function SingleNavRow({
       } ${
         active
           ? 'bg-[#b83b44]/22 text-white border border-[#c4454b]/40'
-          : 'text-[#c7b3b6] hover:bg-[#23181a]/75 hover:text-white border border-transparent'
+          : 'text-[#c7b3b6] hover:bg-[#201518]/75 hover:text-white border border-transparent'
       }`}
     >
       <span className="flex items-center gap-3 min-w-0">

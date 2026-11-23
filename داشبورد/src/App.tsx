@@ -79,7 +79,7 @@ class AdminErrorBoundary extends React.Component<
         >
           <div className="max-w-md w-full rounded-2xl border border-[#c4454b]/25 bg-[#1a1013]/68 backdrop-blur-xl p-6 text-center space-y-4">
             <div className="text-[17px] font-bold">حدث خطأ مؤقت في لوحة الإدارة</div>
-            <div className="text-[12.5px] text-[#cbb6b9] font-mono-num">{this.state.message}</div>
+            <div className="text-[12.5px] text-[#c7b3b6] font-mono-num">{this.state.message}</div>
             <button
               type="button"
               onClick={() => window.location.reload()}

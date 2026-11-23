@@ -53,14 +53,14 @@ export function LoginView({
       dir={lang === 'ar' ? 'rtl' : 'ltr'}
       className="min-h-dvh w-full bg-[#16070a] bg-[radial-gradient(ellipse_at_top,rgba(205,58,68,0.34),transparent_60%),radial-gradient(ellipse_at_bottom_left,rgba(184,48,58,0.22),transparent_58%)] flex flex-col items-center justify-center p-4"
     >
-      <div className="w-full max-w-[430px] rounded-[20px] border border-[#e05b64]/30 bg-[#280e14]/58 backdrop-blur-xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.55)] space-y-6">
+      <div className="w-full max-w-[430px] rounded-[20px] border border-[#c4454b]/30 bg-[#280e14]/58 backdrop-blur-xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.55)] space-y-6">
         <div className="flex items-center justify-between gap-3">
           <HostapayLogo platformName={platformName} countryCode={countryCode} />
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onToggleLang}
-              className="rounded-lg border border-[#c4454b]/25 bg-[#24181b]/75 px-2.5 py-1 text-[12px] text-[#d8c7c9] hover:text-white cursor-pointer"
+              className="rounded-lg border border-[#c4454b]/25 bg-[#241317]/75 px-2.5 py-1 text-[12px] text-[#c7b3b6] hover:text-white cursor-pointer"
             >
               {lang === 'ar' ? 'EN' : 'مصري'}
             </button>
@@ -71,7 +71,7 @@ export function LoginView({
           <h1 className="text-[20px] font-bold text-white">
             {lang === 'ar' ? 'تسجيل دخول الوكيل' : 'Agent Sign In'}
           </h1>
-          <p className="mt-1 text-[13px] text-[#cbb3b7]">
+          <p className="mt-1 text-[13px] text-[#c7b3b6]">
             {lang === 'ar'
               ? 'أدخل البريد الإلكتروني وكلمة المرور للدخول إلى حسابك'
               : 'Enter your email and password to sign in to your account'}
@@ -87,11 +87,11 @@ export function LoginView({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-[#d8c7c9] block">
+            <label className="text-[12px] font-medium text-[#c7b3b6] block">
               {lang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
             </label>
             <div className="relative">
-              <Mail className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-[#9e868a]" />
+              <Mail className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-[#a38f92]" />
               <input
                 type="email"
                 required
@@ -105,11 +105,11 @@ export function LoginView({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-[#d8c7c9] block">
+            <label className="text-[12px] font-medium text-[#c7b3b6] block">
               {lang === 'ar' ? 'كلمة المرور' : 'Password'}
             </label>
             <div className="relative">
-              <Lock className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-[#9e868a]" />
+              <Lock className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-[#a38f92]" />
               <input
                 type="password"
                 required
