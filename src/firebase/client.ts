@@ -96,29 +96,97 @@ export type FirestoreProbeResult = {
 
 let cachedProbe: { ts: number; result: FirestoreProbeResult } | null = null;
 
-async function sha256Hex(input: string): Promise<string> {
+function stripInvisibleChars(value: string): string {
+  return value.replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '');
+}
+
+function pureSha256Hex(input: string): string {
   const bytes = new TextEncoder().encode(input);
+  const K = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ]);
+  const H = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+  ]);
+  const bitLen = bytes.length * 8;
+  const padLen = ((bytes.length + 9 + 63) >> 6) << 6;
+  const padded = new Uint8Array(padLen);
+  padded.set(bytes);
+  padded[bytes.length] = 0x80;
+  const view = new DataView(padded.buffer);
+  view.setUint32(padLen - 8, Math.floor(bitLen / 0x100000000), false);
+  view.setUint32(padLen - 4, bitLen >>> 0, false);
+
+  const w = new Uint32Array(64);
+  const rotr = (n: number, x: number) => (x >>> n) | (x << (32 - n));
+  for (let offset = 0; offset < padLen; offset += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(offset + i * 4, false);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(7, w[i - 15]) ^ rotr(18, w[i - 15]) ^ (w[i - 15] >>> 3);
+      const s1 = rotr(17, w[i - 2]) ^ rotr(19, w[i - 2]) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const S1 = rotr(6, e) ^ rotr(11, e) ^ rotr(25, e);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
+      const S0 = rotr(2, a) ^ rotr(13, a) ^ rotr(22, a);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) >>> 0;
+      h = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+    H[0] = (H[0] + a) >>> 0;
+    H[1] = (H[1] + b) >>> 0;
+    H[2] = (H[2] + c) >>> 0;
+    H[3] = (H[3] + d) >>> 0;
+    H[4] = (H[4] + e) >>> 0;
+    H[5] = (H[5] + f) >>> 0;
+    H[6] = (H[6] + g) >>> 0;
+    H[7] = (H[7] + h) >>> 0;
+  }
+  return Array.from(H)
+    .map((v) => v.toString(16).padStart(8, '0'))
+    .join('');
+}
+
+async function sha256Hex(input: string): Promise<string> {
   if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.subtle) {
-    const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    try {
+      const bytes = new TextEncoder().encode(input);
+      const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      // fall through to pure JS SHA-256
+    }
   }
-  let h1 = 0x811c9dc5;
-  for (let i = 0; i < bytes.length; i++) {
-    h1 ^= bytes[i];
-    h1 = Math.imul(h1, 0x01000193);
-  }
-  return (h1 >>> 0).toString(16).padStart(8, '0');
+  return pureSha256Hex(input);
 }
 
 export async function probeFirestoreServer(): Promise<FirestoreProbeResult> {
-  if (cachedProbe && Date.now() - cachedProbe.ts < 8000) {
+  if (cachedProbe && cachedProbe.result.ok && Date.now() - cachedProbe.ts < 15000) {
     return cachedProbe.result;
   }
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
+    const timer = setTimeout(() => controller.abort(), 9000);
     const restUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/platform_meta/config?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
     const res = await fetch(restUrl, { method: 'GET', signal: controller.signal }).finally(() =>
       clearTimeout(timer)
@@ -131,40 +199,47 @@ export async function probeFirestoreServer(): Promise<FirestoreProbeResult> {
     }
 
     const bodyText = await res.text().catch(() => '');
-    let result: FirestoreProbeResult;
     if (
       bodyText.includes('SERVICE_DISABLED') ||
       bodyText.includes('has not been used in project') ||
       bodyText.includes('it is disabled')
     ) {
-      result = {
+      return {
         ok: false,
         reason: 'api_disabled',
         message: 'يلزم تفعيل Cloud Firestore في مشروع Firebase (moorrcv)',
       };
-    } else if (res.status === 403 || bodyText.includes('PERMISSION_DENIED')) {
-      result = {
+    }
+    if (res.status === 403 || bodyText.includes('PERMISSION_DENIED')) {
+      return {
         ok: false,
         reason: 'permission_denied',
         message: 'صلاحيات Firestore Rules مرفوضة في مشروع moorrcv',
       };
-    } else {
-      result = {
-        ok: false,
-        reason: 'offline',
-        message: 'تعذر الاتصال بسيرفر Firebase',
-      };
     }
+  } catch {
+    // fallback check via Firestore SDK directly
+  }
+
+  try {
+    await getDoc(doc(firestoreDb, 'platform_meta', 'config'));
+    const result: FirestoreProbeResult = { ok: true };
     cachedProbe = { ts: Date.now(), result };
     return result;
-  } catch {
-    const result: FirestoreProbeResult = {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('PERMISSION_DENIED') || msg.includes('permission-denied')) {
+      return {
+        ok: false,
+        reason: 'permission_denied',
+        message: 'صلاحيات Firestore Rules مرفوضة في مشروع moorrcv',
+      };
+    }
+    return {
       ok: false,
       reason: 'offline',
       message: 'تعذر الاتصال بسيرفر Firebase',
     };
-    cachedProbe = { ts: Date.now(), result };
-    return result;
   }
 }
 
@@ -375,9 +450,12 @@ export async function loginWithFirestore(
   emailRaw: string,
   passwordRaw: string
 ): Promise<{ ok: boolean; status: number; userId?: string; slice?: PlatformState; error?: string }> {
-  const email = emailRaw.trim().toLowerCase();
-  const password = passwordRaw.trim();
-  if (!email || !password) {
+  const email = stripInvisibleChars(emailRaw).trim().toLowerCase();
+  const passwordClean = stripInvisibleChars(passwordRaw).trim();
+  const passwordCandidates = Array.from(
+    new Set([passwordRaw.trim(), passwordRaw, passwordClean].filter((p) => p.length > 0))
+  );
+  if (!email || passwordCandidates.length === 0) {
     return {
       ok: false,
       status: 400,
@@ -385,62 +463,89 @@ export async function loginWithFirestore(
     };
   }
 
-  const probe = await probeFirestoreServer();
-  if (!probe.ok) {
-    return { ok: false, status: 503, error: probe.message };
-  }
+  try {
+    const q = query(collection(firestoreDb, 'users'), where('emailLower', '==', email));
+    const qSnap = await getDocs(q);
+    let candidateDocs = qSnap.docs;
 
-  const q = query(collection(firestoreDb, 'users'), where('emailLower', '==', email));
-  let snap = await getDocs(q);
-  if (snap.empty) {
-    // Secondary scan in case legacy doc lacks emailLower
-    const allSnap = await getDocs(collection(firestoreDb, 'users'));
-    const matchDoc = allSnap.docs.find(
-      (d) => String(d.data().email || '').trim().toLowerCase() === email
-    );
-    if (!matchDoc) {
+    if (candidateDocs.length === 0) {
+      const allSnap = await getDocs(collection(firestoreDb, 'users'));
+      candidateDocs = allSnap.docs.filter(
+        (d) => stripInvisibleChars(String(d.data().email || '')).trim().toLowerCase() === email
+      );
+    }
+
+    if (candidateDocs.length === 0) {
       return {
         ok: false,
         status: 401,
         error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
       };
     }
-    snap = { docs: [matchDoc] } as unknown as typeof snap;
-  }
 
-  const targetDoc = snap.docs[0];
-  const user = parseUserDoc(targetDoc.id, targetDoc.data() as Record<string, unknown>);
+    let matchedDoc: (typeof candidateDocs)[number] | null = null;
+    for (const targetDoc of candidateDocs) {
+      const rawData = targetDoc.data() as Record<string, unknown>;
+      const parsed = parseUserDoc(targetDoc.id, rawData);
+      let okPass = false;
+      for (const candidatePass of passwordCandidates) {
+        if (parsed.passwordHash && parsed.passwordSalt) {
+          const candidateHash = await sha256Hex(`${parsed.passwordSalt}:${candidatePass}`);
+          if (candidateHash === parsed.passwordHash) {
+            okPass = true;
+            break;
+          }
+        }
+        if (typeof rawData.password === 'string' && rawData.password === candidatePass) {
+          okPass = true;
+          break;
+        }
+      }
+      if (okPass) {
+        matchedDoc = targetDoc;
+        if (parsed.active) break;
+      }
+    }
 
-  let validPass = false;
-  if (user.passwordHash && user.passwordSalt) {
-    const candidateHash = await sha256Hex(`${user.passwordSalt}:${password}`);
-    validPass = candidateHash === user.passwordHash;
-  } else if (typeof targetDoc.data().password === 'string') {
-    validPass = targetDoc.data().password === password;
-  }
+    if (!matchedDoc) {
+      return {
+        ok: false,
+        status: 401,
+        error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+      };
+    }
 
-  if (!validPass) {
+    const user = parseUserDoc(matchedDoc.id, matchedDoc.data() as Record<string, unknown>);
+    if (!user.active) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'هذا الحساب غير مفعّل من لوحة الإدارة — برجاء التواصل مع الإدارة لتفعيل الحساب',
+      };
+    }
+
+    const sliceRes = await fetchAgentSliceFromFirestore(user.id);
+    if (!sliceRes.ok || !sliceRes.slice) {
+      return { ok: false, status: 403, error: 'الحساب غير مفعّل أو غير متاح' };
+    }
+
+    cachedProbe = { ts: Date.now(), result: { ok: true } };
+    return { ok: true, status: 200, userId: user.id, slice: sliceRes.slice };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('PERMISSION_DENIED') || msg.includes('permission-denied')) {
+      return {
+        ok: false,
+        status: 503,
+        error: 'صلاحيات Firestore Rules مرفوضة في مشروع moorrcv',
+      };
+    }
     return {
       ok: false,
-      status: 401,
-      error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+      status: 503,
+      error: 'تعذر الاتصال بقاعدة بيانات Firebase (moorrcv) — يرجى المحاولة مرة أخرى',
     };
   }
-
-  if (!user.active) {
-    return {
-      ok: false,
-      status: 403,
-      error: 'هذا الحساب غير مفعّل من لوحة الإدارة — برجاء التواصل مع الإدارة لتفعيل الحساب',
-    };
-  }
-
-  const sliceRes = await fetchAgentSliceFromFirestore(user.id);
-  if (!sliceRes.ok || !sliceRes.slice) {
-    return { ok: false, status: 403, error: 'الحساب غير مفعّل أو غير متاح' };
-  }
-
-  return { ok: true, status: 200, userId: user.id, slice: sliceRes.slice };
 }
 
 export function subscribeAgentInFirestore(
